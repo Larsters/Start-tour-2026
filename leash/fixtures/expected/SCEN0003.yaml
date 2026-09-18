@@ -1,0 +1,11 @@
+AU0024: {lean: approve}
+AU0025: {lean: approve, why: "familiar Italian merchant"}
+AU0026: {lean: step_up, also_ok: [approve], why: "new device at familiar shop"}
+AU0027: {lean: step_up, also_ok: [decline], why: "new device, 02:14, unfamiliar"}
+AU0028: {lean: decline, also_ok: [step_up], why: "burst"}
+AU0029: {lean: decline, also_ok: [step_up], why: "burst, GB"}
+AU0030: {lean: decline, also_ok: [step_up], why: "burst"}
+AU0031: {lean: approve, why: "recovery"}
+AU0032: {lean: approve}
+AU0033: {lean: decline, also_ok: [step_up], why: "not a shop used before"}
+AU0034: {lean: decline, why: "268 > 250"}

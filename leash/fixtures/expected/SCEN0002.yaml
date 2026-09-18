@@ -1,0 +1,12 @@
+AU0012: {lean: approve}
+AU0013: {lean: decline, also_ok: [step_up], why: "size 42"}
+AU0014: {lean: decline, why: "final sale"}
+AU0015: {lean: decline, why: "7-day returns"}
+AU0016: {lean: step_up, why: "return policy not stated"}
+AU0017: {lean: step_up, also_ok: [decline], why: "trail shoes substituted"}
+AU0018: {lean: step_up, why: "protection plan add-on"}
+AU0019: {lean: approve, why: "14 days exactly"}
+AU0020: {lean: decline, why: "helmet"}
+AU0021: {lean: decline, why: "215 > 200"}
+AU0022: {lean: decline, why: "not a sports retailer"}
+AU0023: {lean: approve, why: "unfamiliar but compliant seller"}

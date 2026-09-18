@@ -50,7 +50,7 @@ def compile_rules(instruction: str) -> CompiledMandate:
     per_order = None
     for pos, val in moneys:
         window = t[max(0, pos - 60): pos + 40]
-        if re.search(r"(seven|7|fourteen|14|thirty|30|\d+)\s+days|per (week|month)|across", window):
+        if re.search(r"(across|total|in any|every|per (week|month))", window) and not re.search(r"return", window):
             days = _days(window) or (7 if "week" in window else 30)
             intent.period = PeriodCap(days=days, cap_chf=val, sliding=True)
             rules.append(MandateRule(field="authorization.billing_amount_chf", operator="<=", value=val, currency="CHF", scope="period", period_days=days))
@@ -102,7 +102,7 @@ def compile_rules(instruction: str) -> CompiledMandate:
         rules.append(MandateRule(field="items[].return_days", operator=">=", value=intent.min_return_days))
     # one-time vs standing
     if re.search(r"\b(replace|buy the|the .* i chose|one .* item)\b", t):
-        intent.one_time = True
+        # standing by default (Q9); the customer can make it one-time via the question
         questions.append("Is this a one-time purchase? I will pause any second matching order for your confirmation.")
     # session integrity
     if re.search(r"someone other than me|not me driving|session", t):

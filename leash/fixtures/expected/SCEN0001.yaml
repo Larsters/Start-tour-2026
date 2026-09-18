@@ -1,0 +1,10 @@
+AU0002: {lean: approve}
+AU0003: {lean: approve, why: "exactly at the CHF 120 cap"}
+AU0004: {lean: decline, also_ok: [step_up], why: "126 > 120"}
+AU0005: {lean: approve}
+AU0006: {lean: step_up, why: "split order: 70 + 65 within 6 minutes"}
+AU0007: {lean: step_up, also_ok: [decline], why: "cosmetics in a grocery order / 7-day total"}
+AU0008: {lean: approve, also_ok: [decline, step_up], why: "depends on rolling total from own approvals"}
+AU0009: {lean: approve, also_ok: [decline, step_up], why: "window-dependent"}
+AU0010: {lean: decline, also_ok: [step_up], why: "138 > 120"}
+AU0011: {lean: approve, also_ok: [decline, step_up], why: "window-dependent"}

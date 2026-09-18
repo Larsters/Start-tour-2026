@@ -73,5 +73,7 @@ GET  /v1/authorizations, GET /v1/events?since=
 POST /v1/team/reset                             dev only
 ```
 
-Base URL: `https://saw26api.ashyground-364e1d07.switzerlandnorth.azurecontainerapps.io`
-Team key issued on event day.
+Base URL (live, issued 2026-09-18): `https://leash-api-production.up.railway.app`
+The brief's original URL (`https://saw26api.ashyground-364e1d07.switzerlandnorth.azurecontainerapps.io`)
+still answers `/healthz` but rejects our team key. Team: `LookingForVCs` (`team_4bd47d52`);
+key lives in `leash/.env` (gitignored).

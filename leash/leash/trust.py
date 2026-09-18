@@ -26,18 +26,26 @@ def _norm(name: str) -> str:
 
 
 def lookalike(merchant_id: str, merchant_name: str, ref: ReferenceData, baseline: CardBaseline) -> str | None:
-    """Return the ID of a *different* merchant whose name is near-identical.
-    Checks the card's familiar merchants first, then the whole catalogue."""
-    candidates = {mid: ref.merchants[mid]["merchant_name"] for mid in baseline.merchant_counts if mid in ref.merchants}
-    candidates.update({mid: m["merchant_name"] for mid, m in ref.merchants.items()})
+    """Return the ID of a *different*, better-established merchant whose name is
+    near-identical. Asymmetric: a merchant this card already uses is never a
+    lookalike; an imitator is one that is unknown to the card and has less
+    network history than the merchant it resembles."""
+    if baseline.merchant_counts.get(merchant_id, 0) > 0:
+        return None
+    own_hist = ref.merchant(merchant_id).approved
     target = _norm(merchant_name)
-    for mid, name in candidates.items():
+    best: tuple[int, str] | None = None
+    for mid, m in ref.merchants.items():
         if mid == merchant_id:
             continue
-        sim = fuzz.ratio(target, _norm(name))
-        if sim >= THRESHOLDS["lookalike_min_similarity"]:
-            return mid
-    return None
+        other_hist = ref.merchant(mid).approved
+        familiar = baseline.merchant_counts.get(mid, 0) > 0
+        if not familiar and other_hist <= own_hist:
+            continue
+        sim = fuzz.ratio(target, _norm(m["merchant_name"]))
+        if sim >= THRESHOLDS["lookalike_min_similarity"] and (best is None or sim > best[0]):
+            best = (sim, mid)
+    return best[1] if best else None
 
 
 def merchant_trust(merchant_id: str, merchant_name: str, merchant_country: str,
@@ -58,20 +66,22 @@ def merchant_trust(merchant_id: str, merchant_name: str, merchant_country: str,
         inputs["lookalike_of"] = la
         return MerchantTrust(merchant_id, 0.0, "lookalike", inputs, la)
 
+    has_history = (ms.approved + ms.declined) > 0
     score = 0.0
-    score += min(len(ms.cards), 20) / 20 * 0.30                 # breadth across the issuer's book
-    score += (ms.approval_rate if (ms.approved + ms.declined) else 0.0) * 0.25
-    score += max(0.0, 1 - ms.refund_rate * 5) * 0.10           # 20 % refund rate → 0
+    score += 0.15 if inputs["in_catalogue"] else 0.0                 # issuer's merchant directory
+    score += min(len(ms.cards), 20) / 20 * 0.25                       # breadth across the issuer's book
+    score += (ms.approval_rate if has_history else 0.0) * 0.20
+    score += (max(0.0, 1 - ms.refund_rate * 5) * 0.10) if has_history else 0.0   # 20 % refund rate → 0
     score += min(inputs["months_seen"], 6) / 6 * 0.10
-    score += min(card_count, 3) / 3 * 0.20                       # this card's own experience
+    score += min(card_count, 3) / 3 * 0.15                             # this card's own experience
     score += 0.05 if not inputs["country_new_for_card"] else 0.0
     score = round(min(score, 1.0), 3)
-    if score >= THRESHOLDS["merchant_trusted_score"]:
+    if has_history and (ms.approval_rate < 0.6 or ms.refund_rate > 0.2):
+        band = "risky"                                                 # bad record, not merely unknown
+    elif score >= THRESHOLDS["merchant_trusted_score"]:
         band = "trusted"
-    elif score >= THRESHOLDS["merchant_risky_score"]:
-        band = "unknown"
     else:
-        band = "risky"
+        band = "unknown"
     return MerchantTrust(merchant_id, score, band, inputs)
 
 
@@ -86,7 +96,7 @@ def session_signals(*, device_id: str, hour: int, merchant_familiar: bool, count
                     recent_10m: int, amount_chf: float, baseline: CardBaseline) -> list[SessionSignal]:
     s: list[SessionSignal] = []
     if device_id and device_id not in baseline.device_counts:
-        s.append(SessionSignal("new_device", 0.35, f"device {device_id} never seen on this card"))
+        s.append(SessionSignal("new_device", 0.50, f"device {device_id} never seen on this card"))
     if baseline.hour_counts and baseline.hour_share(hour) < 0.02:
         s.append(SessionSignal("unusual_hour", 0.20, f"{hour:02d}:xx is outside this card's normal hours"))
     if not merchant_familiar:
@@ -101,12 +111,12 @@ def session_signals(*, device_id: str, hour: int, merchant_familiar: bool, count
 
 
 def thermostat(previous: float, signals: list[SessionSignal]) -> tuple[float, bool]:
-    """Returns (new_score, escalated). Hysteresis: escalate ≥ trust_escalate,
-    stay escalated until < trust_relax."""
-    add = sum(x.weight for x in signals)
-    score = previous + add if signals else max(0.0, previous - 0.25)
+    """Exponentially-decayed risk: score = 0.25·previous + Σ signal weights.
+    Hysteresis: escalate at ≥ trust_escalate; once escalated, stay so until
+    the score drops below trust_relax. Returns (new_score, escalated)."""
+    score = 0.25 * previous + sum(x.weight for x in signals)
     score = round(max(0.0, min(1.0, score)), 3)
-    was_escalated = previous >= THRESHOLDS["trust_relax"] and previous >= THRESHOLDS["trust_escalate"] * 0.999
+    was_escalated = previous >= THRESHOLDS["trust_escalate"]
     if score >= THRESHOLDS["trust_escalate"]:
         return score, True
     if was_escalated and score >= THRESHOLDS["trust_relax"]:

@@ -5,6 +5,22 @@ import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+
+
+def _load_dotenv(path: Path) -> None:
+    """Minimal .env reader: KEY=VALUE lines, existing env wins."""
+    if not path.is_file():
+        return
+    for line in path.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        os.environ.setdefault(key.strip(), value.strip().strip("'\""))
+
+
+_load_dotenv(ROOT / ".env")
+
 DATA_DIR = Path(os.environ.get("LEASH_DATA_DIR", ROOT.parent / "viseca-2026" / "data"))
 STATE_DIR = Path(os.environ.get("LEASH_STATE_DIR", ROOT / "state"))
 FIXTURES_DIR = ROOT / "fixtures"
@@ -12,7 +28,7 @@ FIXTURES_DIR = ROOT / "fixtures"
 # Viseca sandbox
 LEASH_BASE_URL = os.environ.get(
     "LEASH_BASE_URL",
-    "https://saw26api.ashyground-364e1d07.switzerlandnorth.azurecontainerapps.io",
+    "https://leash-api-production.up.railway.app",
 )
 TEAM_API_KEY = os.environ.get("TEAM_API_KEY", "")
 

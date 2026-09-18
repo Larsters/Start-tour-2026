@@ -184,3 +184,45 @@ and diffs against `fixtures/expected/SCEN0004.yaml` (our leans from doc 02).
 - Redelivered event → same decision, no double count.
 - Demo storyline runs end to end through the chatbot, with cards for questions, confirmation, step-up, and revoke.
 - Judges can read any decision and see what was allowed, which facts, why, and how the customer stayed in control.
+
+---
+
+## v1 status (2026-09-18)
+
+Code lives in `leash/` (Python 3.12, uv). **Offline: 45/45 fixture decisions
+match the leans in doc 02; 10 tests pass; every decision < 100 ms without a
+model call.** Live sandbox and OpenAI paths are implemented but untested until
+keys exist (`TEAM_API_KEY`, `OPENAI_API_KEY`).
+
+```bash
+cd leash && uv venv && uv pip install -e ".[dev]"
+.venv/bin/python -m leash.replay            # all scenarios, prints decision + top reason per purchase
+.venv/bin/pytest -q
+.venv/bin/uvicorn leash.api:app --port 8080  # HTTP API + cards (+ worker when TEAM_API_KEY is set)
+.venv/bin/python -m leash.mcp_server         # MCP (stdio) for the shopping agent
+```
+
+### For the chatbot team — the trusted channel
+| Call | Purpose |
+| --- | --- |
+| `GET  /cards?customer_id=CU0019` | pending cards: `question`, `confirm_mandate`, `step_up`, `info` |
+| `POST /cards/{id}/answer?customer_id=…` `{"answer": "confirm" \| "approve" \| "approve_one_time_card" \| "decline" \| "<text>"}` | answer a card; step-up answers are relayed to the sandbox `/resolve` |
+| `POST /mandates/draft` `{customer_id, card_id, instruction}` | compile; returns `contract_markdown` + question cards |
+| `POST /mandates/{draft}/request-confirmation` | creates the confirmation card |
+| `GET  /mandates/{id}` · `GET /mandates/{id}/budget` · `PATCH` (tighten) · `DELETE` (revoke) | contract lifecycle |
+| `GET  /ledger?customer_id=…` · `GET /authorizations/{id}` | decision feed and full receipts |
+
+Render a card's `title`, `body` (bullet list of failing clauses), `options`, and
+`ref.recommended_action` (the one-time-card proposal) — never pass it through the LLM.
+
+### For the agent — MCP tools
+`draft_mandate`, `get_open_questions`, `request_confirmation`, `get_policy`,
+`get_remaining_budget`, `precheck_cart`, `propose_purchase`, `get_merchant_trust`,
+`explain_decision`. No confirm / tighten / revoke / resolve.
+
+### What is not in v1 yet
+- Advisory web lookups (brand size guide, market price, merchant reputation) — clauses and `knowledge.md` exist, adapters do not.
+- Question answers do not yet update the intent (e.g. "deliver by" from a birthday answer) — needs a small "apply answer" step in the compiler.
+- Dry-run against the customer's history.
+- OpenAI model names are placeholders (`gpt-5-mini` / `gpt-5`); verify against the API on event day.
+- The sandbox worker has never seen the real API; first thing on event day is `SCEN0000` end to end.
