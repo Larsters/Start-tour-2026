@@ -121,36 +121,48 @@ def basket_categories(a: Authorization, i: IntentSpec) -> list[ClauseResult]:
     return out
 
 
-def requested_item(a: Authorization, facts: dict[int, ExtractedFacts], i: IntentSpec) -> list[ClauseResult]:
-    if not i.requested_item:
-        return []
-    want = _tokens(i.requested_item.type)
-    if not want:
-        return []
+def _requested(i: IntentSpec) -> list:
+    return ([i.requested_item] if i.requested_item else []) + list(i.requested_items)
+
+
+def _match(have: list[str], want: list[str]) -> str:
+    """'exact' | 'substitute' | 'none' for one cart line vs one requested item."""
     head = want[-1]
+    if not have or (have[-1] != head and head not in have):
+        return "none"
+    return "substitute" if [t for t in want[:-1] if t not in have] else "exact"
+
+
+def requested_item(a: Authorization, facts: dict[int, ExtractedFacts], i: IntentSpec) -> list[ClauseResult]:
+    wants = [(ri, _tokens(ri.type)) for ri in _requested(i) if _tokens(ri.type)]
+    if not wants:
+        return []
     out: list[ClauseResult] = []
-    main_lines = [it for it in a.items if not facts[it.line_no].is_addon_service]
-    for it in main_lines:
-        have = _tokens(facts[it.line_no].item_type or it.item_name)
-        if not have or have[-1] != head and head not in have:
-            out.append(_fail("requested_item", "decline", f"'{it.item_name}' is not the requested {i.requested_item.type}",
-                             value=it.item_name, limit=i.requested_item.type))
+    for it in a.items:
+        f = facts[it.line_no]
+        if f.is_addon_service:
             continue
-        missing = [t for t in want[:-1] if t not in have]
-        if missing:
-            out.append(_fail("requested_item", "step_up", f"'{it.item_name}' looks like a substitute for the requested {i.requested_item.type} (missing: {', '.join(missing)})",
-                             value=it.item_name, limit=i.requested_item.type))
+        have = _tokens(f.item_type or it.item_name) + _tokens(it.item_name)
+        scored = sorted(((_match(have, w), ri, w) for ri, w in wants), key=lambda x: {"exact": 0, "substitute": 1, "none": 2}[x[0]])
+        kind, ri, w = scored[0]
+        label = " / ".join(ri.type for ri, _ in wants)
+        if kind == "none":
+            out.append(_fail("requested_item", "decline", f"'{it.item_name}' is not the requested {label}", value=it.item_name, limit=label))
             continue
-        for k, v in i.requested_item.attributes.items():
-            got = getattr(facts[it.line_no], k, None)
+        if kind == "substitute":
+            missing = [t for t in w[:-1] if t not in have]
+            out.append(_fail("requested_item", "step_up", f"'{it.item_name}' looks like a substitute for the requested {ri.type} (missing: {', '.join(missing)})",
+                             value=it.item_name, limit=ri.type))
+            continue
+        out.append(_pass("requested_item", f"'{it.item_name}' matches the requested {ri.type}", value=it.item_name))
+        for k, v in ri.attributes.items():
+            got = getattr(f, k, None)
             if got is None:
                 out.append(_unknown("item_attribute", f"{k} not stated for '{it.item_name}' (you asked for {k} {v})", value=None, limit=v))
-            elif str(got).lower() != str(v).lower():
+            elif str(got).lower().strip() != str(v).lower().strip():
                 out.append(_fail("item_attribute", "decline", f"{k} {got} offered, you asked for {k} {v}", value=str(got), limit=v))
             else:
                 out.append(_pass("item_attribute", f"{k} {got} as requested", value=str(got), limit=v))
-        if not any(c.clause == "requested_item" for c in out):
-            out.append(_pass("requested_item", f"'{it.item_name}' matches the requested {i.requested_item.type}", value=it.item_name))
     return out
 
 
@@ -176,11 +188,11 @@ def return_terms(a: Authorization, facts: dict[int, ExtractedFacts], i: IntentSp
 
 
 def addons(a: Authorization, facts: dict[int, ExtractedFacts], i: IntentSpec) -> ClauseResult | None:
-    if not (i.no_addons or i.requested_item):
+    if not (i.no_addons or _requested(i)):
         return None
     extras = [it for it in a.items if facts[it.line_no].is_addon_service or facts[it.line_no].recurring_billing
               or it.item_category in ("subscriptions", "membership")]
-    want_qty = i.requested_item.quantity if i.requested_item else 1
+    want_qty = sum(ri.quantity for ri in _requested(i)) or 1
     mains = [it for it in a.items if it not in extras]
     if extras:
         names = ", ".join(f"{it.item_name} (CHF {chf(it.unit_price * it.quantity, it.currency, _FX):.2f})" for it in extras)
@@ -194,17 +206,21 @@ def addons(a: Authorization, facts: dict[int, ExtractedFacts], i: IntentSpec) ->
 _FX = {"CHF": 1.0, "EUR": 0.95, "GBP": 1.12, "USD": 0.87}
 
 
-def price_sanity(a: Authorization, ref: ReferenceData) -> list[ClauseResult]:
+def price_sanity(a: Authorization, ref: ReferenceData, market: dict | None = None) -> list[ClauseResult]:
     out = []
     for it in a.items:
         rng = ref.item_range(it.item_id)
+        src = "catalogue"
+        mk = (market or {}).get(it.item_name) if isinstance(market, dict) else None
+        if not rng and mk:
+            rng, src = (mk["low"], (mk["low"] + mk["high"]) / 2, mk["high"]), "market: " + ", ".join(mk.get("sources") or [])[:120]
         if not rng:
             continue
         lo, typ, hi = rng
         unit_chf = chf(it.unit_price, it.currency, ref.fx)
         if unit_chf < lo * THRESHOLDS["price_sanity_low_factor"]:
-            out.append(_fail("price_sanity", "step_up", f"'{it.item_name}' at CHF {unit_chf:.2f} is far below the usual CHF {lo:.0f}–{hi:.0f}; could be counterfeit or a bait listing",
-                             value=unit_chf, limit=[lo, hi]))
+            out.append(_fail("price_sanity", "step_up", f"'{it.item_name}' at CHF {unit_chf:.2f} is far below the usual CHF {lo:.0f}–{hi:.0f} ({src}); could be counterfeit or a bait listing",
+                             value=unit_chf, limit=[lo, hi], extra={"source": src}))
         elif unit_chf > hi * 1.5:
             out.append(_fail("price_sanity", "step_up", f"'{it.item_name}' at CHF {unit_chf:.2f} is far above the usual CHF {lo:.0f}–{hi:.0f}", value=unit_chf, limit=[lo, hi]))
         else:
@@ -274,6 +290,11 @@ def merchant_trust_clause(mt: MerchantTrust, a: Authorization, i: IntentSpec) ->
         return _fail("merchant_trust", "decline", f"'{m.merchant_name}' ({m.merchant_id}) is a near-identical name to a known merchant ({other}) but a different seller; never seen on this card",
                      value=mt.band, extra=mt.inputs)
     if mt.band == "risky":
+        web = mt.inputs.get("web_reputation") or {}
+        if web.get("verdict") == "suspicious":
+            srcs = ", ".join(web.get("sources") or []) or "no sources"
+            return _fail("merchant_trust", "decline", f"{m.merchant_name} is flagged as suspicious online (scam / counterfeit / non-delivery reports; sources: {srcs})",
+                         value=mt.score, extra=mt.inputs)
         return _fail("merchant_trust", "decline", f"{m.merchant_name} has a poor record across the issuer's cards (approval {mt.inputs['approval_rate']:.0%}, refunds {mt.inputs['refund_rate']:.0%})",
                      value=mt.score, extra=mt.inputs)
     if mt.band == "unknown":
@@ -310,3 +331,15 @@ def duplicate(a: Authorization, ledger: Ledger, i: IntentSpec) -> ClauseResult:
     if i.one_time and ledger.approved_count(a.mandate_id) > 0:
         return _fail("duplicate", "step_up", "you asked for a one-time purchase and one was already approved under this contract", value="one_time")
     return _pass("duplicate", "no matching recent order")
+
+
+def sizing_advice(a: Authorization, advice: dict, i: IntentSpec) -> ClauseResult:
+    """Brand sizing knowledge vs the size the customer asked for (Q3: contradiction → ask)."""
+    runs, rec = advice.get("runs"), advice.get("recommendation", "")
+    src = ", ".join(advice.get("sources") or []) or "unverified"
+    wanted = advice.get("requested_size")
+    if runs in ("runs_small", "runs_large") and wanted:
+        return ClauseResult(clause="item_sizing", status="fail", severity="step_up",
+                            summary=f"{advice['brand']} {advice['item_type']} {runs.replace('_', ' ')} — you asked for size {wanted}. {rec}",
+                            value=wanted, extra={"sources": advice.get("sources"), "verified": advice.get("verified"), "confidence": advice.get("confidence")})
+    return _info("item_sizing", f"{advice['brand']}: {rec} (source: {src})", extra={"sources": advice.get("sources")})

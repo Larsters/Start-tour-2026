@@ -129,14 +129,17 @@ def compile_rules(instruction: str) -> CompiledMandate:
 
 _LLM_SYSTEM = """You compile a cardholder's plain-language spending instruction into a machine-checkable wallet policy for an issuer-side control engine. Output JSON matching the schema. Rules:
 - Keep the customer's meaning; never widen permissions. When unsure, leave the field null and add an open question.
-- per_order_cap_chf: the maximum a single order may total, delivery included. period: a rolling cap over N days.
-- allowed_item_categories use this vocabulary: groceries, clothing, sporting_goods, electronics, books, pet_care, household, health, subscriptions, membership, cosmetics, gift_card, transport, dining, food_delivery, fuel, travel, hotel, entertainment, software, sustainable_goods, kids_family, home_improvement, photography.
-- requested_item: when the customer names one specific thing to buy (e.g. 'road-running shoes size 43', '27-inch monitor'); set no_addons true and one_time true unless the text implies repeats.
+- per_order_cap_chf: the maximum a single order may total, delivery included. 'around CHF X total' for a multi-item request -> per_order_cap_chf X AND period {days: 30, cap_chf: X}.
+- period: a rolling cap over N days ('across any seven days' -> days 7).
+- allowed_item_categories vocabulary: groceries, clothing, sporting_goods, electronics, books, pet_care, household, health, subscriptions, membership, cosmetics, gift_card, transport, dining, food_delivery, fuel, travel, hotel, entertainment, software, sustainable_goods, kids_family, home_improvement, photography. Leave empty when requested_items are given.
+- requested_items: one entry per specific thing the customer names, e.g. [{type: 'road-running shoes', attributes: {size: '43'}}, {type: 'football jersey', attributes: {brand: 'adidas'}}]. `type` is a short natural phrase KEEPING qualifiers (road-running, 27-inch). `attributes` keys are ONLY size, brand, color; omit unknown ones (ask instead). Set no_addons true when items are named.
+- one_time: true ONLY if the customer says once/one-time/only one; otherwise false.
 - retailer_categories: merchant types the customer restricts to (same vocabulary), e.g. 'specialist sports retailer' -> ['sporting_goods'].
 - seller_familiarity_min: 3 for 'regularly', 1 for 'bought from before / used before'; null if not mentioned.
 - session_integrity: true if the customer wants pauses when the session looks like someone else.
-- deliver_by: an ISO date if a deadline is stated or derivable (e.g. 'birthday in a week' -> ask, do not guess).
-- open_questions: only things the customer alone can answer. assumptions: interpretations you made.
+- deliver_by: ISO date only if stated or exactly derivable; 'birthday in a week' -> null + open question for the date.
+- open_questions: AT MOST 3, only facts that block a decision and that the customer alone can answer (size, deadline date, brand yes/no). Never ask about color, style, model preferences.
+- assumptions: interpretations you made, at most 4, one sentence each.
 - uncertainty_policy: 'ask' if they say ask me; 'decline' if they say decline when unsure; else 'ask'."""
 
 
@@ -152,14 +155,17 @@ def compile_llm(instruction: str, today: date | None = None) -> CompiledMandate 
                                   "assumptions": {"type": "array", "items": {"type": "string"}},
                                   "uncertainty_policy": {"type": "string", "enum": ["ask", "decline", "approve"]}},
                    "required": ["intent", "open_questions", "assumptions", "uncertainty_policy"]}
+        extra = {"reasoning_effort": config.REASONING_EFFORT} if config.COMPILER_MODEL.startswith("gpt-5") else {}
         resp = client.chat.completions.create(
-            model=config.COMPILER_MODEL,
+            model=config.COMPILER_MODEL, **extra,
             messages=[{"role": "system", "content": _LLM_SYSTEM + f"\nToday is {today or date.today()}."},
                       {"role": "user", "content": instruction}],
             response_format={"type": "json_schema", "json_schema": {"name": "policy", "schema": wrapper}},
         )
         data = json.loads(resp.choices[0].message.content or "{}")
         intent = IntentSpec.model_validate(data["intent"])
+        banned = re.compile(r"colou?r|style|design|model preference|preferred brand|preferred model", re.I)
+        data["open_questions"] = [q for q in data["open_questions"] if not banned.search(q)][:3]
         base = compile_rules(instruction)          # rules produce the API hard_rules; LLM refines intent
         merged = base.model_copy(update={"intent": intent, "open_questions": data["open_questions"],
                                          "assumptions": data["assumptions"], "uncertainty_policy": data["uncertainty_policy"],
@@ -175,3 +181,51 @@ def compile_instruction(instruction: str, prefer_llm: bool = True) -> CompiledMa
         if m:
             return m
     return compile_rules(instruction)
+
+
+_APPLY_SYSTEM = """You update a wallet policy after the customer answered a follow-up question. Given the current intent JSON, the question and the customer's answer, return the FULL updated intent JSON (same schema). Only change what the answer settles: e.g. a date -> deliver_by; a shoe size -> attributes.size on the matching requested item; 'yes it's one-time' -> one_time true; a brand -> attributes.brand. Never widen limits unless the answer explicitly raises them. Also return 'note': one sentence describing the change."""
+
+
+def apply_answer(m: CompiledMandate, question: str, answer: str, today: date | None = None) -> tuple[CompiledMandate, str]:
+    """Merge a customer's answer into the intent. Rules first; LLM for the rest."""
+    i = m.intent
+    a = answer.strip()
+    ql = question.lower()
+    note = ""
+    if (d := re.search(r"(\d{4}-\d{2}-\d{2})", a)) and ("date" in ql or "deliver" in ql or "birthday" in ql or "by when" in ql):
+        i.deliver_by = date.fromisoformat(d.group(1)); note = f"deliver by {i.deliver_by}"
+    elif (sz := re.fullmatch(r"(?:eu\s*)?(\d{2}(?:[.,]5)?|xs|s|m|l|xl)", a, re.I)) and "size" in ql:
+        all_items = ([i.requested_item] if i.requested_item else []) + list(i.requested_items)
+        qtok = set(re.findall(r"[a-z]+", ql))
+        named = [ri for ri in all_items if any(t in qtok for t in re.findall(r"[a-z]+", ri.type.lower()) if t not in ("adidas", "nike", "the", "a"))]
+        targets = named or [ri for ri in all_items if "size" not in ri.attributes] or all_items
+        for ri in targets:
+            ri.attributes["size"] = sz.group(1).upper()
+        note = f"size {sz.group(1).upper()} on {', '.join(ri.type for ri in targets)}"
+    elif "one-time" in ql or "one time" in ql:
+        i.one_time = a.lower().startswith(("y", "ja", "oui", "si"))
+        note = f"one_time={i.one_time}"
+    elif "months" in ql and re.fullmatch(r"\d{1,3}", a):
+        i.max_subscription_term_months = int(a); note = f"max subscription term {a} months"
+    elif "most a single order" in ql and (mo := re.search(r"(\d+(?:[.,]\d+)?)", a)):
+        i.per_order_cap_chf = float(mo.group(1).replace(",", ".")); note = f"per-order cap CHF {i.per_order_cap_chf}"
+    elif config.OPENAI_API_KEY:
+        try:
+            from openai import OpenAI
+            client = OpenAI(api_key=config.OPENAI_API_KEY, timeout=30, max_retries=0)
+            schema = {"type": "object", "additionalProperties": False, "properties": {"intent": IntentSpec.model_json_schema(), "note": {"type": "string"}}, "required": ["intent", "note"]}
+            r = client.chat.completions.create(model=config.COMPILER_MODEL, messages=[
+                {"role": "system", "content": _APPLY_SYSTEM + f"\nToday is {today or date.today()}."},
+                {"role": "user", "content": json.dumps({"intent": i.model_dump(mode="json"), "question": question, "answer": a})}],
+                response_format={"type": "json_schema", "json_schema": {"name": "update", "schema": schema}})
+            data = json.loads(r.choices[0].message.content or "{}")
+            i = IntentSpec.model_validate(data["intent"]); note = data.get("note", "updated by model")
+        except Exception as exc:
+            note = f"answer recorded, not applied ({exc})"
+    else:
+        note = "answer recorded, not applied (no rule matched)"
+    m.intent = i
+    m.open_questions = [q for q in m.open_questions if q != question]
+    m.assumptions.append(f"Customer answered '{question}' → {a} ({note}).")
+    m.guidance = [f"intent:{json.dumps(i.model_dump(mode='json'))}"]
+    return m, note

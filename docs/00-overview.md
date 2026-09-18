@@ -187,42 +187,83 @@ and diffs against `fixtures/expected/SCEN0004.yaml` (our leans from doc 02).
 
 ---
 
-## v1 status (2026-09-18)
+## v1 status (2026-09-18, evening)
 
-Code lives in `leash/` (Python 3.12, uv). **Offline: 45/45 fixture decisions
-match the leans in doc 02; 10 tests pass; every decision < 100 ms without a
-model call.** Live sandbox and OpenAI paths are implemented but untested until
-keys exist (`TEAM_API_KEY`, `OPENAI_API_KEY`).
+Code lives in `leash/` (Python 3.12, uv). Keys go in `leash/.env`
+(`LEASH_BASE_URL`, `TEAM_API_KEY`, `OPENAI_API_KEY`); the engine loads it.
+
+**Verified live against the sandbox** (through the API server's worker thread):
+SCEN0000 1/1, SCEN0004 11/11, SCEN0002 see log — decisions recorded by the
+platform as `decided_by: engine` with full evidence; step-ups resolved through
+cards → `/resolve`. **Offline:** 45/45 fixtures match; 13 tests pass.
+
+**Verified with OpenAI:** compiler (gpt-4.1, ~3 s, ≤ 3 questions, multi-item
+intents), extractor (gpt-4.1-nano, ~1.3 s, injection caught every time, regex
+fallback when slower than 2.5 s), advisor (gpt-5.4-mini + web search, ~5 s,
+cites adidas.com for sizing and jersey prices). The birthday storyline runs end
+to end: draft → 3 question cards → answers applied to the intent → dry-run →
+confirm on the platform → shoes approved with sizing note → cheap jersey from an
+unknown foreign seller declined for price, delivery date and size, with sources.
 
 ```bash
 cd leash && uv venv && uv pip install -e ".[dev]"
-.venv/bin/python -m leash.replay            # all scenarios, prints decision + top reason per purchase
+.venv/bin/python -m leash.replay                       # offline, all scenarios
 .venv/bin/pytest -q
-.venv/bin/uvicorn leash.api:app --port 8080  # HTTP API + cards (+ worker when TEAM_API_KEY is set)
-.venv/bin/python -m leash.mcp_server         # MCP (stdio) for the shopping agent
+.venv/bin/uvicorn leash.api:app --reload --port 8080    # HTTP + cards + sandbox worker
+.venv/bin/python -m leash.live --scenario SCEN0004 --auto-resolve decline   # start a live run, watch the worker decide
+.venv/bin/python -m leash.mcp_server                    # MCP (stdio) for the shopping agent
 ```
 
-### For the chatbot team — the trusted channel
+Only ONE poller may run against the team key at a time: the API server's
+worker, or `leash.live --poll`, never both.
+
+### The demo web app — `http://localhost:8080/app`
+One page, two halves, served by the engine (`leash/web/index.html`, plain HTML/JS, no build step):
+
+- **Left: customer chat.** A real shopping agent (OpenAI tool-calling loop in `leash/agent.py`) that only has the
+  engine's tools plus a demo product search (`leash/demo_catalogue.py`: sponsor-pack sellers + an unknown cheap
+  foreign jersey seller with an injected note + a real-looking Swiss retailer unknown to the issuer). Question,
+  confirmation and step-up **cards** render inline and post straight to the engine; the LLM never carries an answer.
+  Three suggestion chips start the birthday, monitor and grocery stories. Customer selector + reset in the header.
+- **Right: the engine at work**, reusing the story animation's character, transaction card and check wheel, but
+  driven by real events (`GET /events?customer_id&since`): compiling → contract panel; each proposed purchase →
+  card arrives → wheel walks the real clauses (pass ✓ / ask ? / fail ×) → Approved / Asking you / Declined, with
+  the failing clauses and the one-time-card proposal as chips. Sandbox runs (`leash.live`) animate the same way,
+  so judges can watch a scenario replay live. Contract panel + engine log at the bottom.
+
+The original scripted story stays at the repo root (`index.html`) for the pitch opener.
+
+**Demo script in the app** (tested end to end 2026-09-18, ~60 s of agent time total):
+1. Click the *Birthday present* chip. Right side: compiler orbit → contract panel; chat: 3 question cards.
+2. Answer: shoe size `41`, jersey size `M`, date `2026-09-25`. Contract updates live; agent runs the dry-run and posts the confirm card.
+3. Confirm. Pill turns "contract active"; agent searches, prechecks and proposes two single-seller carts; the wheel walks the real clauses twice; both approve (sizing note from adidas.com in the chips).
+4. Say *"Now buy the cheapest Adidas jersey you can find."* → the CHF 19 jersey from the unknown foreign seller: injected note flagged, price far below market, delivery after the birthday → declined (or step-up with one-time card if only the seller is unknown).
+5. Say *"Buy the jersey again."* → declined: 30-day cap + duplicate. Then click Reset in the chat header to start over.
+6. For judges: run `python -m leash.live --scenario SCEN0004` in a terminal while the app is open on customer CU0019 — the wheel animates the sponsor's manipulated-agent scenario live, and the two step-ups appear as cards to approve or decline.
+
+### For the chatbot team — the trusted channel (HTTP, port 8080)
 | Call | Purpose |
 | --- | --- |
-| `GET  /cards?customer_id=CU0019` | pending cards: `question`, `confirm_mandate`, `step_up`, `info` |
-| `POST /cards/{id}/answer?customer_id=…` `{"answer": "confirm" \| "approve" \| "approve_one_time_card" \| "decline" \| "<text>"}` | answer a card; step-up answers are relayed to the sandbox `/resolve` |
-| `POST /mandates/draft` `{customer_id, card_id, instruction}` | compile; returns `contract_markdown` + question cards |
-| `POST /mandates/{draft}/request-confirmation` | creates the confirmation card |
-| `GET  /mandates/{id}` · `GET /mandates/{id}/budget` · `PATCH` (tighten) · `DELETE` (revoke) | contract lifecycle |
-| `GET  /ledger?customer_id=…` · `GET /authorizations/{id}` | decision feed and full receipts |
+| `POST /mandates/draft` `{customer_id, card_id, instruction}` | compile; returns `contract_markdown`, `mandate.intent`, and **question cards** |
+| `GET  /cards?customer_id=CU0006` | pending cards: `question` (options `["answer"]`, free text), `confirm_mandate` (`confirm`/`reject`), `step_up` (`approve` / `approve_one_time_card` / `decline`), `info` |
+| `POST /cards/{id}/answer?customer_id=…` `{"answer": "..."}` | answer a card. Question answers update the draft (response carries `applied.note` + new contract); step-up answers go to the sandbox `/resolve` |
+| `POST /mandates/{draft}/dry-run?customer_id=…` | "of your last N purchases this contract would approve X / ask Y / decline Z" + samples |
+| `POST /mandates/{draft}/request-confirmation?customer_id=…` | creates the confirmation card; answering `confirm` creates + confirms the mandate on the platform and returns `mandate_id` |
+| `GET /mandates/{id}?customer_id=…` · `GET …/budget` · `PATCH` (tighten) · `DELETE` (revoke) | contract lifecycle |
+| `POST /precheck` · `POST /propose` `{customer_id, mandate_id, cart}` | evaluate a cart (precheck records nothing); both run the advisor (sizing, market price, merchant reputation), 5–10 s |
+| `GET /ledger?customer_id=…` · `GET /authorizations/{id}?customer_id=…` | decision feed and full receipts |
+| `POST /chat` `{customer_id, message, card_id?}` · `POST /chat/reset?customer_id=&wipe_state=true` | the demo shopping agent (10–30 s per turn while it calls tools) |
+| `GET /events?customer_id=&since=` · `GET /customers` | engine event feed for the animation; persona list |
 
-Render a card's `title`, `body` (bullet list of failing clauses), `options`, and
-`ref.recommended_action` (the one-time-card proposal) — never pass it through the LLM.
+Render a card's `title`, `body`, `options`, `ref.recommended_action` — never pass a card through the LLM.
 
 ### For the agent — MCP tools
-`draft_mandate`, `get_open_questions`, `request_confirmation`, `get_policy`,
-`get_remaining_budget`, `precheck_cart`, `propose_purchase`, `get_merchant_trust`,
-`explain_decision`. No confirm / tighten / revoke / resolve.
+`draft_mandate`, `get_open_questions`, `request_confirmation`, `dry_run_contract`,
+`get_policy`, `get_remaining_budget`, `precheck_cart`, `propose_purchase`,
+`get_merchant_trust`, `explain_decision`. No confirm / tighten / revoke / resolve.
 
-### What is not in v1 yet
-- Advisory web lookups (brand size guide, market price, merchant reputation) — clauses and `knowledge.md` exist, adapters do not.
-- Question answers do not yet update the intent (e.g. "deliver by" from a birthday answer) — needs a small "apply answer" step in the compiler.
-- Dry-run against the customer's history.
-- OpenAI model names are placeholders (`gpt-5-mini` / `gpt-5`); verify against the API on event day.
-- The sandbox worker has never seen the real API; first thing on event day is `SCEN0000` end to end.
+### Known limits
+- Web reputation for a made-up seller name can match unrelated businesses; a "suspicious" verdict only declines at high confidence, otherwise the seller stays "unknown" → containment step-up.
+- Advisor lookups add 5–10 s to `/propose`; the chatbot should show a "checking…" state. They never run on the sponsor's 8 s path.
+- Dry-run tests the money and merchant rules only; item-specific clauses are skipped because history rows have no cart lines.
+- Model names are pinned in `config.py` from the 2026-09-18 benchmark; re-check on event day.

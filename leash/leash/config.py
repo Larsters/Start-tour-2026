@@ -34,10 +34,11 @@ TEAM_API_KEY = os.environ.get("TEAM_API_KEY", "")
 
 # Models (verify names against the OpenAI model list on event day)
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
-EXTRACTOR_MODEL = os.environ.get("LEASH_EXTRACTOR_MODEL", "gpt-5-mini")
-COMPILER_MODEL = os.environ.get("LEASH_COMPILER_MODEL", "gpt-5")
-EXTRACTOR_TIMEOUT_S = float(os.environ.get("LEASH_EXTRACTOR_TIMEOUT_S", "1.5"))
-MIN_BUDGET_FOR_MODEL_S = float(os.environ.get("LEASH_MIN_BUDGET_FOR_MODEL_S", "2.5"))
+EXTRACTOR_MODEL = os.environ.get("LEASH_EXTRACTOR_MODEL", "gpt-4.1-nano")   # ~1 s, benchmarked 2026-09-18
+COMPILER_MODEL = os.environ.get("LEASH_COMPILER_MODEL", "gpt-4.1")          # ~3 s; gpt-5 took 30 s
+EXTRACTOR_TIMEOUT_S = float(os.environ.get("LEASH_EXTRACTOR_TIMEOUT_S", "2.5"))
+REASONING_EFFORT = os.environ.get("LEASH_REASONING_EFFORT", "low")   # only sent to gpt-5* models
+MIN_BUDGET_FOR_MODEL_S = float(os.environ.get("LEASH_MIN_BUDGET_FOR_MODEL_S", "3.5"))
 
 # Decision thresholds (all surfaced in receipts)
 THRESHOLDS = {

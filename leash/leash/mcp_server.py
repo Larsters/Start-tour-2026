@@ -45,6 +45,13 @@ def request_confirmation(customer_id: str, draft_id: str) -> str:
 
 
 @mcp.tool()
+def dry_run_contract(customer_id: str, draft_id: str) -> str:
+    """Replay the customer's own recent purchases through a drafted contract: how many would be approved / asked / declined.
+    Show the summary to the customer before asking them to confirm."""
+    return _j(service.dry_run(customer_id, draft_id))
+
+
+@mcp.tool()
 def get_policy(customer_id: str, mandate_id: str) -> str:
     """The active contract: what is allowed, the clauses enforced, assumptions and open questions."""
     return _j(service.get_policy(customer_id, mandate_id))

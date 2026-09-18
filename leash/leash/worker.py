@@ -7,6 +7,7 @@ import threading
 import time
 from datetime import datetime, timezone
 
+from . import events
 from .cards import Cards
 from .engine import decide
 from .models import AuthorizationEvent, Receipt
@@ -44,12 +45,14 @@ def handle_event(client: VisecaClient, envelope: dict, *, allow_model: bool = Tr
                                       "customer_message": "The purchase request could not be validated; please review it."})
         return None
     now = datetime.now(timezone.utc)
+    from .service import _purchase_summary
+    events.publish(ev.mandate.customer_id, "decision.started", mode="sandbox", purchase=_purchase_summary(ev), run_id=run_id)
     r = decide(ev, run_id=run_id, allow_model=allow_model, now=now)
     remaining = (ev.deadline_at - datetime.now(timezone.utc)).total_seconds()
     log.info("%s -> %s [%s] in %d ms (%.1fs left)", r.authorization_id, r.decision, ",".join(r.reason_codes), r.elapsed_ms, remaining)
     client.decision(r.authorization_id, r.to_api_payload())
-    if r.decision == "step_up":
-        make_step_up_card(ev.mandate.customer_id, ev, r)
+    card = make_step_up_card(ev.mandate.customer_id, ev, r) if r.decision == "step_up" else None
+    events.publish(ev.mandate.customer_id, "decision", mode="sandbox", receipt=r.model_dump(mode="json"), purchase=_purchase_summary(ev), card=card, run_id=run_id)
     return r
 
 

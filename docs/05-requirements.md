@@ -145,3 +145,24 @@ decisions being grilled in the design session; they are listed at the bottom.
 | Q24 | UI = the team's **chatbot with follow-up cards** for the customer (animations in progress). Engine questions render as cards fetched directly from the engine and answered directly to the engine — the LLM in the chat never carries the answer. |
 
 Decided by the engine owner (no user input needed): step-up message template, precheck response shape, replay format — see `00-overview.md`.
+
+
+## Implementation status (2026-09-18, end of day)
+
+| Group | Status | Notes |
+| --- | --- | --- |
+| C1–C5 compile, contract, confirm | ✅ | gpt-4.1 compiler + rules fallback; contract markdown; confirm creates + confirms on the platform |
+| C6 dry-run | ✅ | money/merchant rules only; item clauses skipped (history has no cart lines) |
+| C7 tighten / revoke | ✅ | HTTP `PATCH`/`DELETE` → platform; not exposed to the agent |
+| C8 compiler fallback | ✅ | rules parser handles all five sponsor instructions |
+| D1–D15 decide | ✅ | 45/45 offline; all five scenarios verified live, `decided_by: engine` |
+| Q1–Q6 quarantine | ✅ | gpt-4.1-nano extractor (~1.3 s) with nonce canary, regex fallback, injection never lowered by the model |
+| A1–A5 advisory | ✅ | web search with sources (adidas.com cited); sizing contradiction → step_up; price far below market → step_up; low-confidence web suspicion → containment, not decline |
+| I1–I5 agent interface | ✅ | MCP: 10 tools; no confirm/tighten/revoke/resolve |
+| H1–H4 human path | ✅ engine side | cards API + step-up → `/resolve`; **UI itself = chatbot team** |
+| M1–M3 merchant trust & containment | ✅ | bands from issuer-wide history + web adjustment; containment proposal on unknown sellers; lookalike → decline |
+| V derived clauses | ✅ | `deliver_by`, subscription term, price sanity, item attributes (size/brand/color) |
+| N1–N5 non-functional | ✅ | one process, predictable fallbacks, 13 tests, structured receipts |
+
+Open on the engine: none. Waiting on: the chatbot UI (cards rendering), and
+event-day re-checks (model names, sandbox URL, team key).

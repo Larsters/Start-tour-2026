@@ -6,10 +6,13 @@ import logging
 from contextlib import asynccontextmanager
 from typing import Any
 
+from pathlib import Path
+
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse, RedirectResponse
 from pydantic import BaseModel
 
-from . import service
+from . import agent, events, service
 from .cards import Cards
 from .ledger import Ledger
 from .worker import Worker
@@ -58,6 +61,12 @@ class AnswerIn(BaseModel):
     note: str = ""
 
 
+class ChatIn(BaseModel):
+    customer_id: str
+    message: str
+    card_id: str | None = None
+
+
 class TightenIn(BaseModel):
     add_rules: list[dict[str, Any]] | None = None
     uncertainty_policy: str | None = None
@@ -92,6 +101,11 @@ def draft(body: DraftIn):
 @app.post("/mandates/{draft_id}/request-confirmation")
 def request_confirmation(draft_id: str, customer_id: str):
     return _404(service.request_confirmation, customer_id, draft_id)
+
+
+@app.post("/mandates/{draft_id}/dry-run")
+def dry_run(draft_id: str, customer_id: str):
+    return _404(service.dry_run, customer_id, draft_id)
 
 
 @app.get("/mandates/{mandate_id}")
@@ -166,3 +180,50 @@ def start_run(scenario_id: str, mandate_id: str):
 @app.get("/sandbox/runs/{run_id}")
 def run_status(run_id: str):
     return service.client().run(run_id)
+
+
+# ------------------------------------------------------------------ web app + chat + events
+WEB = Path(__file__).resolve().parent.parent / "web"
+
+
+@app.get("/")
+def root():
+    return RedirectResponse("/app")
+
+
+@app.get("/app")
+def web_app():
+    return FileResponse(WEB / "index.html")
+
+
+@app.post("/chat")
+def chat(body: ChatIn):
+    if not service.config.OPENAI_API_KEY:
+        raise HTTPException(400, "OPENAI_API_KEY not set")
+    return agent.chat(body.customer_id, body.message, body.card_id)
+
+
+@app.post("/chat/reset")
+def chat_reset(customer_id: str, wipe_state: bool = False):
+    agent.reset(customer_id)
+    if wipe_state:
+        import shutil
+        shutil.rmtree(service.config.STATE_DIR / customer_id, ignore_errors=True)
+    events.publish(customer_id, "session.reset")
+    return {"ok": True}
+
+
+@app.get("/events")
+def get_events(customer_id: str, since: int = 0):
+    return {"events": events.since(customer_id, since), "latest": events.latest_seq()}
+
+
+@app.get("/customers")
+def customers():
+    from .data import ref
+    r = ref()
+    out = []
+    for cid, c in r.customers.items():
+        cards = [k for k, b in r.baselines.items() if b.customer_id == cid]
+        out.append({"customer_id": cid, "name": c["persona_name"], "card_id": cards[0] if cards else None, "preferences": c["shopping_preferences"]})
+    return out

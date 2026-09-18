@@ -42,7 +42,10 @@ uv venv && uv pip install -e ".[dev]"
 | `engine.py` | Combine → receipt; idempotent via the ledger |
 | `ledger.py` / `state.py` / `cards.py` | Per-customer JSONL ledger, markdown mandate/knowledge, customer cards |
 | `viseca.py` / `worker.py` | Sandbox client and long-poll worker |
-| `api.py` | FastAPI: decide, precheck, mandates, cards |
+| `advisor.py` | Cold-path web lookups (brand sizing, market price, merchant reputation) → hints + `knowledge.md` |
+| `service.py` | Operations shared by HTTP and MCP: draft, answers, dry-run, confirm, precheck, propose, cards |
+| `api.py` | FastAPI: decide, precheck, propose, mandates, dry-run, cards, ledger |
+| `live.py` | Live sandbox runner (observe the API worker, or poll here) |
 | `mcp_server.py` | MCP tools for the agent |
 | `replay.py` | Offline replay + expected-lean diff (`fixtures/expected/*.yaml`) |
 

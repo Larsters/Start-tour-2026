@@ -13,6 +13,7 @@ from .models import (AuthorizationEvent, ClauseResult, CompiledMandate, Decision
 from .quarantine import ExtractedFacts, extract
 from .state import CustomerState
 from .trust import merchant_trust, session_signals, thermostat
+from .advisor import Hints
 
 _UNCERTAINTY: dict[str, Decision] = {"ask": "step_up", "decline": "decline", "approve": "approve"}
 
@@ -65,7 +66,8 @@ def _message(decision: Decision, ev: AuthorizationEvent, evidence: list[ClauseRe
 
 
 def decide(ev: AuthorizationEvent, *, run_id: str | None = None, mandate: CompiledMandate | None = None,
-           ref: ReferenceData | None = None, allow_model: bool = True, now: datetime | None = None) -> Receipt:
+           ref: ReferenceData | None = None, allow_model: bool = True, now: datetime | None = None,
+           hints: "Hints | None" = None) -> Receipt:
     t0 = time.perf_counter()
     ref = ref or default_ref()
     a = ev.authorization
@@ -94,6 +96,16 @@ def decide(ev: AuthorizationEvent, *, run_id: str | None = None, mandate: Compil
 
     # 4. trust
     mt = merchant_trust(a.merchant.merchant_id, a.merchant.merchant_name, a.merchant.merchant_country, ref, baseline, a.timestamp)
+    if hints and hints.merchant_reputation and mt.band != "lookalike":
+        rep = hints.merchant_reputation
+        mt.score = round(max(0.0, min(1.0, mt.score + rep["score_adj"])), 3)
+        mt.inputs["web_reputation"] = {"verdict": rep["verdict"], "sources": rep.get("sources")}
+        if rep["verdict"] == "suspicious" and rep.get("confidence") == "high":
+            mt.band = "risky"
+        elif rep["verdict"] == "suspicious":
+            mt.inputs["web_reputation"]["note"] = "low-confidence suspicion; treated as unknown → containment"
+        elif rep["verdict"] == "reputable" and mt.band == "unknown" and mt.score >= 0.5:
+            mt.band = "trusted"
     signals = session_signals(
         device_id=a.customer_device_id, hour=a.timestamp.hour,
         merchant_familiar=baseline.merchant_counts.get(a.merchant.merchant_id, 0) > 0,
@@ -112,7 +124,9 @@ def decide(ev: AuthorizationEvent, *, run_id: str | None = None, mandate: Compil
     for c in (C.addons(a, facts, intent), C.subscription_term(a, facts, intent), C.deliver_by(a, intent),
               C.fulfillment(a, intent), C.retailer_type(a, intent), C.seller_familiarity(a, intent, baseline)):
         if c: ev_list.append(c)
-    ev_list += C.price_sanity(a, ref)
+    ev_list += C.price_sanity(a, ref, market=hints.market_range_chf if hints else None)
+    if hints and hints.size_advice:
+        ev_list.append(C.sizing_advice(a, hints.size_advice, intent))
     ev_list.append(C.merchant_trust_clause(mt, a, intent))
     ev_list.append(C.injection(a, facts))
     ev_list.append(C.duplicate(a, ledger, intent))

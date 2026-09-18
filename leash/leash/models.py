@@ -140,7 +140,8 @@ class IntentSpec(BaseModel):
     period: PeriodCap | None = None
     allowed_item_categories: list[str] = Field(default_factory=list)
     forbidden_item_categories: list[str] = Field(default_factory=lambda: ["gift_card"])
-    requested_item: RequestedItem | None = None
+    requested_item: RequestedItem | None = None                     # single item (legacy)
+    requested_items: list[RequestedItem] = Field(default_factory=list)  # several items in one request
     retailer_categories: list[str] = Field(default_factory=list)   # merchant_category values
     seller_familiarity_min: int | None = None                       # approved history rows
     min_return_days: int | None = None
