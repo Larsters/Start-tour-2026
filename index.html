@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f7f7f5"><title>Viseca — Agent on a Leash</title>
+<style>
+:root{--paper:#f7f7f5;--ink:#252527;--mid:#707074;--muted:#9b9b9e;--line:#e3e3df;--green:#698362;--gb:#eaf0e7;--amber:#a87821;--ab:#faf1dc;--red:#b95f57;--rb:#fae9e6;--shadow:0 24px 70px rgba(35,35,36,.08);--ease:cubic-bezier(.22,.78,.2,1)}
+*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--paper)}
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Arial,sans-serif;color:var(--ink);letter-spacing:-.025em;-webkit-font-smoothing:antialiased}button{font:inherit}
+.stage{position:relative;width:100%;height:100%;overflow:hidden;background:radial-gradient(circle at 50% 45%,#fff 0,#fbfbfa 42%,var(--paper) 78%)}
+.track{display:flex;width:500vw;height:100%;transition:transform 1.35s var(--ease);will-change:transform}
+.scene{position:relative;flex:0 0 100vw;width:100vw;height:100%;overflow:hidden}
+.logo{position:fixed;z-index:100;right:34px;bottom:26px;font-size:20px;font-weight:760;letter-spacing:-.075em}
+.progress{position:fixed;z-index:100;left:34px;bottom:31px;width:132px;height:2px;border-radius:2px;background:#dfdfdb;overflow:hidden}.progress i{display:block;width:0;height:100%;background:#777779;transition:width .7s var(--ease)}
+.replay{position:fixed;z-index:100;right:30px;top:24px;padding:9px 14px;border:1px solid transparent;border-radius:999px;background:transparent;color:#8b8b8e;opacity:0;pointer-events:none;cursor:pointer;transition:.3s}.replay.show{opacity:1;pointer-events:auto}.replay:hover{border-color:#ddd;background:#fff;color:var(--ink)}
+.eyebrow{color:#97979b;font-size:12px;font-weight:650;letter-spacing:.13em;text-transform:uppercase}.headline{margin:12px 0 0;font-size:clamp(38px,4.7vw,70px);line-height:.98;font-weight:640;letter-spacing:-.065em}.subhead{margin:18px 0 0;color:var(--mid);font-size:clamp(14px,1.2vw,18px);line-height:1.5}
+
+/* Flat SVG character: every expression stays editable and truly 2D. */
+.agent{position:relative;width:clamp(150px,17vw,245px);aspect-ratio:1;filter:drop-shadow(0 22px 22px rgba(30,30,31,.08));transform-origin:50% 88%}.agent svg{display:block;width:100%;height:100%;overflow:visible}
+.agent .body{fill:#fffef9;stroke:#353538;stroke-width:5}.agent .eye{fill:#343437}.agent .eye-glint{fill:#fff}.agent .cheek{fill:#dbe5c8}.agent .mouth{transform-box:fill-box;transform-origin:center;transition:transform .12s}.agent .leaf{fill:#bfd190;stroke:#353538;stroke-width:4;transform-origin:bottom center}.agent .arm,.agent .foot{fill:#fffef9;stroke:#353538;stroke-width:5;stroke-linecap:round;stroke-linejoin:round}
+.agent.eating{animation:nibbleBody .34s ease}.agent.eating .mouth{animation:chomp .34s ease}.agent.eating .leaf{animation:leafWiggle .34s ease}
+.agent.thinking{animation:thinkingBob 2.2s ease-in-out infinite}.agent.thinking .leaf{animation:leafThink 1.4s ease-in-out infinite}.agent.thinking .pupils{animation:lookAround 2.2s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+.agent.happy{animation:happyHop .7s var(--ease)}.agent.happy .leaf{animation:leafWiggle .35s ease 2}.agent.face-right{transform:scaleX(-1)}.agent.face-right.thinking{animation:thinkingBobFlip 2.2s ease-in-out infinite}
+@keyframes chomp{0%,100%{transform:scaleY(1)}42%{transform:scaleY(.12)}70%{transform:scaleY(.75)}}@keyframes nibbleBody{0%,100%{transform:scale(1)}42%{transform:translateY(5px) scale(1.045,.95)}}@keyframes leafWiggle{0%,100%{transform:rotate(0)}40%{transform:rotate(14deg)}70%{transform:rotate(-8deg)}}@keyframes thinkingBob{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-10px) rotate(2deg)}}@keyframes thinkingBobFlip{0%,100%{transform:scaleX(-1) translateY(0) rotate(-1deg)}50%{transform:scaleX(-1) translateY(-10px) rotate(2deg)}}@keyframes leafThink{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(9deg)}}@keyframes lookAround{0%,100%{transform:translateX(-2px)}50%{transform:translateX(5px)}}@keyframes happyHop{0%,100%{transform:translateY(0) scale(1)}38%{transform:translateY(-20px) scale(.96,1.05)}65%{transform:translateY(2px) scale(1.04,.96)}}
+
+/* Scene 1 */
+.intro{display:grid;grid-template-columns:minmax(330px,380px) 330px;align-items:center;justify-content:center;gap:10vw;padding:4vh 6vw}
+.chat-window{position:relative;width:min(380px,34vw);height:min(82vh,720px);min-height:590px;border:8px solid #29292b;border-radius:48px;background:rgba(255,255,255,.97);box-shadow:0 30px 85px rgba(30,30,31,.14);overflow:hidden;transform:translateY(18px);opacity:0;transition:1s var(--ease)}.chat-window::before{content:"";position:absolute;z-index:5;left:50%;top:10px;width:92px;height:25px;transform:translateX(-50%);border-radius:999px;background:#29292b}.scene.active .chat-window{transform:translateY(0);opacity:1}
+.chat-top{height:70px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 18px 13px;border-bottom:1px solid #efefec;color:#6d6d70;font-size:11px}.phone-time{font-weight:700;color:#343437}.chat-name{font-size:13px;font-weight:650;color:#454548}.phone-icons{font-size:12px;font-weight:800;letter-spacing:.08em;color:#555}
+.chat-body{height:calc(100% - 70px);display:flex;flex-direction:column;padding:22px 18px 20px}.assistant-hello{display:flex;align-items:flex-start;gap:10px;max-width:90%;color:#555559;font-size:14px;line-height:1.45}.mini-face{width:28px;height:28px;display:grid;place-items:center;flex:0 0 auto;border:1px solid #dcdcd8;border-radius:9px;background:#fafaf8;font-size:13px}
+.prompt-wrap{margin-top:auto}.prompt-label{margin:0 0 10px 4px;color:#9a9a9d;font-size:11px;letter-spacing:.04em}.composer{min-height:112px;padding:17px 18px 14px;border:1px solid #dededb;border-radius:20px;background:#fff;box-shadow:0 10px 26px rgba(30,30,31,.045)}.typed{min-height:53px;color:#37373a;font-size:15px;line-height:1.45}.caret{display:inline-block;width:1px;height:1em;margin-left:2px;vertical-align:-2px;background:#555;animation:blink .8s steps(1) infinite}@keyframes blink{50%{opacity:0}}
+.composer-actions{display:flex;justify-content:space-between;align-items:center;color:#aaa;font-size:17px}.send{width:32px;height:32px;display:grid;place-items:center;border:0;border-radius:50%;background:#29292b;color:#fff;transform:scale(.75);opacity:.45;transition:.3s}.send.ready{transform:scale(1);opacity:1}.send.sent{animation:sendPop .45s var(--ease)}@keyframes sendPop{40%{transform:scale(.8)}70%{transform:scale(1.12)}}
+.intro-agent{display:grid;justify-items:center;gap:22px;opacity:0;transform:translateX(25px);transition:1s .25s var(--ease)}.scene.active .intro-agent{opacity:1;transform:translateX(0)}.intro-agent p{margin:0;color:#8a8a8e;font-size:13px}
+.flying-word{position:fixed;z-index:200;padding:7px 11px;border:1px solid #dfdfdc;border-radius:999px;background:#fff;color:#535357;box-shadow:0 8px 20px rgba(30,30,31,.08);font-size:12px;font-weight:580;white-space:nowrap;pointer-events:none}
+
+/* Search / retry */
+.research{display:grid;place-items:center;padding:5vh 5vw}.research-copy{position:absolute;left:6vw;top:7vh;max-width:420px}.research-space{position:relative;width:min(850px,72vw);height:min(680px,78vh);display:grid;place-items:center}.research-agent{z-index:4}
+.orbit{position:absolute;inset:0;transform:rotate(var(--turn,0deg));transition:transform .9s var(--ease)}.thought{--a:0deg;position:absolute;left:50%;top:50%;width:clamp(145px,14vw,205px);min-height:68px;display:flex;align-items:center;gap:11px;padding:13px 15px;border:1px solid #e2e2de;border-radius:17px;background:rgba(255,255,255,.96);box-shadow:0 14px 36px rgba(30,30,31,.06);color:#68686c;font-size:13px;font-weight:560;line-height:1.25;opacity:0;transform:translate(-50%,-50%) rotate(var(--a)) translateY(clamp(-235px,-25vw,-190px)) rotate(calc(-1 * var(--a) - var(--turn,0deg))) scale(.82);transition:transform .9s var(--ease),opacity .5s,border-color .4s}.thought::before{content:"";width:8px;height:8px;flex:0 0 auto;border-radius:50%;background:#d1d1cd}.thought.show{opacity:1;transform:translate(-50%,-50%) rotate(var(--a)) translateY(clamp(-235px,-25vw,-190px)) rotate(calc(-1 * var(--a) - var(--turn,0deg))) scale(1)}.thought.done{color:#567052;border-color:#d9e5d4}.thought.done::before{background:var(--green)}
+.thinking-dots{position:absolute;z-index:5;left:57%;top:54%;display:flex;gap:5px;padding:9px 12px;border:1px solid #e4e4e0;border-radius:14px;background:#fff;box-shadow:0 10px 24px rgba(30,30,31,.06)}.thinking-dots i{width:5px;height:5px;border-radius:50%;background:#8e8e91;animation:dot 1.1s ease-in-out infinite}.thinking-dots i:nth-child(2){animation-delay:.15s}.thinking-dots i:nth-child(3){animation-delay:.3s}@keyframes dot{0%,70%,100%{transform:translateY(0);opacity:.35}35%{transform:translateY(-5px);opacity:1}}
+.research-complete{position:absolute;z-index:8;inset:0;display:grid;place-items:center;pointer-events:none;opacity:0;transform:scale(.82);transition:.65s var(--ease)}.research-complete.show{opacity:1;transform:scale(1)}.complete-badge{width:92px;height:92px;display:grid;place-items:center;border-radius:50%;background:#fff;box-shadow:0 18px 50px rgba(30,30,31,.12);color:var(--green);font-size:38px}
+
+/* Firewall */
+.firewall{display:grid;grid-template-columns:230px minmax(300px,430px) minmax(420px,600px);align-items:center;justify-content:center;gap:3vw;padding:5vh 4vw}.firewall-copy{position:absolute;left:5vw;top:6vh}.fire-agent{display:grid;justify-items:center;gap:18px}.fire-agent .caption{color:#939397;font-size:12px;text-align:center}
+.transaction-card{position:relative;z-index:6;width:100%;padding:24px;border:1px solid #dfdfdc;border-radius:23px;background:#fff;box-shadow:var(--shadow);opacity:0;transform:translateX(-180px) scale(.72);transition:1s var(--ease)}.transaction-card.arrive{opacity:1;transform:translateX(0) scale(1)}
+.card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}.card-kicker{color:#9a9a9d;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}.auth-id{color:#aaa;font-size:10px}.product-name{margin:0 0 5px;font-size:25px;font-weight:650;letter-spacing:-.045em}.product-meta{margin:0 0 22px;color:#7d7d81;font-size:13px}.card-row{display:flex;justify-content:space-between;gap:18px;padding:10px 0;border-top:1px solid #efefec;font-size:12px}.card-row span:first-child{color:#9b9b9e}.card-row strong{font-weight:620;text-align:right}
+.check-wheel{position:relative;width:min(44vw,555px);aspect-ratio:1;display:grid;place-items:center}.wheel-line{position:absolute;inset:15%;border:1px solid #e3e3df;border-radius:50%}.wheel-core{position:relative;z-index:5;width:180px;height:180px;display:grid;place-items:center;align-content:center;padding:20px;border:1px solid #dededb;border-radius:50%;background:#fff;box-shadow:0 20px 55px rgba(30,30,31,.08);text-align:center}.core-icon{width:44px;height:44px;display:grid;place-items:center;margin-bottom:10px;border-radius:50%;background:#f0f0ed;color:#777;font-size:20px;transition:.35s}.core-title{font-size:16px;font-weight:650}.core-detail{min-height:28px;margin-top:5px;color:#929296;font-size:10px;line-height:1.35}.core-result{margin-top:8px;padding:5px 9px;border-radius:999px;background:#f0f0ed;color:#777;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.criterion{--a:0deg;position:absolute;z-index:4;left:50%;top:50%;width:132px;min-height:47px;display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid #e0e0dd;border-radius:14px;background:#fff;color:#77777b;box-shadow:0 8px 21px rgba(30,30,31,.045);font-size:10.5px;font-weight:590;line-height:1.15;transform:translate(-50%,-50%) rotate(calc(var(--a) + var(--spin,0deg))) translateY(clamp(-218px,-18vw,-175px)) rotate(calc(-1 * var(--a) - var(--spin,0deg)));transition:transform .72s var(--ease),color .3s,border-color .3s,box-shadow .3s}.criterion b{width:18px;height:18px;display:grid;place-items:center;flex:0 0 auto;border-radius:50%;background:#f0f0ed;color:#aaa;font-size:11px;transition:.3s}.criterion.active{color:#29292c;border-color:#c9c9c5;box-shadow:0 13px 30px rgba(30,30,31,.09)}.criterion.pass{color:#587151;border-color:#d4e2cf}.criterion.pass b{background:var(--gb);color:var(--green)}.criterion.warn{color:#87651f;border-color:#eddcaf}.criterion.warn b{background:var(--ab);color:var(--amber)}.criterion.fail{color:#a1544d;border-color:#efcec9}.criterion.fail b{background:var(--rb);color:var(--red)}
+.feedback{position:absolute;z-index:20;left:42%;top:68%;display:flex;gap:10px;opacity:0;transition:.4s}.feedback.show{opacity:1}.feedback-chip{padding:9px 12px;border:1px solid #e7c9c5;border-radius:999px;background:#fff6f4;color:#a45c55;font-size:11px;font-weight:630}.feedback.returning{animation:returnFeedback 1.15s var(--ease) forwards}@keyframes returnFeedback{to{transform:translate(-38vw,-12vh) scale(.65);opacity:0}}
+.approved-halo{position:absolute;width:220px;height:220px;border:1px solid #cfdccb;border-radius:50%;opacity:0;transform:scale(.7)}.approved .approved-halo{animation:halo 1.25s ease-out forwards}@keyframes halo{0%{opacity:0;transform:scale(.7)}30%{opacity:.8}100%{opacity:0;transform:scale(1.55)}}.approved .wheel-core{border-color:#d2dfce}.approved .core-icon{background:var(--gb);color:var(--green);transform:scale(1.1)}
+@media(max-width:1050px){.intro{grid-template-columns:340px 240px;gap:6vw}.chat-window{width:340px}.firewall{grid-template-columns:170px 300px 440px;gap:18px}.criterion{width:116px}.agent{width:160px}.check-wheel{width:440px}}
+@media(max-width:760px){.intro{grid-template-columns:1fr;padding:5vh 7vw}.intro-agent{position:absolute;right:5vw;top:8vh;transform:scale(.64)!important;transform-origin:top right}.chat-window{height:76vh}.firewall{grid-template-columns:1fr;padding:12vh 6vw 9vh}.fire-agent{position:absolute;left:3vw;bottom:3vh;transform:scale(.6)}.transaction-card{width:min(78vw,420px);margin:0 auto}.check-wheel{width:min(88vw,480px);margin:0 auto}.firewall-copy{top:3vh}.logo{right:20px;bottom:17px}.progress{left:20px;bottom:22px}.research-copy{top:4vh}.research-space{width:96vw}}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
+</style>
+</head>
+<body>
+<main class="stage" aria-label="Animated Viseca intent firewall story">
+<div class="track" id="track">
+  <section class="scene intro active" id="scene-intro">
+    <div class="chat-window">
+      <div class="chat-top"><div class="phone-time">9:41</div><div class="chat-name">Shopping Agent</div><div class="phone-icons">•••</div></div>
+      <div class="chat-body">
+        <div class="assistant-hello"><div class="mini-face">●</div><div>What should I find for you today?</div></div>
+        <div class="prompt-wrap"><div class="prompt-label">Message your shopping agent</div><div class="composer" id="composer"><div class="typed" id="typed"><span class="caret"></span></div><div class="composer-actions"><span>＋</span><button class="send" id="send" aria-label="Send">↑</button></div></div></div>
+      </div>
+    </div>
+    <div class="intro-agent"><div class="agent agent-slot" id="intro-agent"></div><p>Hungry for a task.</p></div>
+  </section>
+
+  <section class="scene research" id="scene-research">
+    <div class="research-copy"><div class="eyebrow">The shopping agent</div><h1 class="headline">Finds the best match.</h1><p class="subhead">It searches, compares and reads the fine print.</p></div>
+    <div class="research-space"><div class="orbit">
+      <div class="thought" style="--a:0deg">Searching trusted sellers</div><div class="thought" style="--a:72deg">Comparing 42 offers</div><div class="thought" style="--a:144deg">Checking EU 43</div><div class="thought" style="--a:216deg">Reading return terms</div><div class="thought" style="--a:288deg">Best match found</div>
+    </div><div class="agent agent-slot research-agent"></div><div class="thinking-dots"><i></i><i></i><i></i></div><div class="research-complete"><div class="complete-badge">✓</div></div></div>
+  </section>
+
+  <section class="scene firewall" id="scene-firewall-one">
+    <div class="firewall-copy"><div class="eyebrow">The intent firewall</div></div>
+    <div class="fire-agent"><div class="agent agent-slot face-right"></div><div class="caption">Shopping Agent</div></div>
+    <article class="transaction-card"><div class="card-top"><span class="card-kicker">Transaction request</span><span class="auth-id">AUTH · 8F2A</span></div><h2 class="product-name">Aero Road 4</h2><p class="product-meta">Black · EU 43</p><div class="card-row"><span>Merchant</span><strong>TrailSpark</strong></div><div class="card-row"><span>Order total</span><strong>CHF 175.00</strong></div><div class="card-row"><span>Delivery</span><strong>Monday</strong></div><div class="card-row"><span>Returns</span><strong>30 days</strong></div></article>
+    <div class="check-wheel" data-run="first"><div class="wheel-line"></div><div class="approved-halo"></div>
+      <div class="criterion" data-result="pass" style="--a:0deg"><b>·</b><span>Product match</span></div><div class="criterion" data-result="warn" style="--a:45deg"><b>·</b><span>Size & fit</span></div><div class="criterion" data-result="pass" style="--a:90deg"><b>·</b><span>Total cost</span></div><div class="criterion" data-result="pass" style="--a:135deg"><b>·</b><span>Shipping cost</span></div><div class="criterion" data-result="fail" style="--a:180deg"><b>·</b><span>Delivery date</span></div><div class="criterion" data-result="pass" style="--a:225deg"><b>·</b><span>Return terms</span></div><div class="criterion" data-result="pass" style="--a:270deg"><b>·</b><span>Merchant trust</span></div><div class="criterion" data-result="pass" style="--a:315deg"><b>·</b><span>No future costs</span></div>
+      <div class="wheel-core"><div class="core-icon">···</div><div class="core-title">Checking</div><div class="core-detail">Binding purchase to your intent</div><div class="core-result">8 checks</div></div>
+    </div>
+    <div class="feedback"><span class="feedback-chip">Fit uncertain</span><span class="feedback-chip">Delivery too late</span></div>
+  </section>
+
+  <section class="scene research" id="scene-retry">
+    <div class="research-copy"><div class="eyebrow">Guided retry</div><h1 class="headline">Fix only what failed.</h1><p class="subhead">The agent gets precise, actionable feedback.</p></div>
+    <div class="research-space"><div class="orbit"><div class="thought" style="--a:0deg">Applying fit constraint</div><div class="thought" style="--a:90deg">Filtering delivery ≤ Friday</div><div class="thought" style="--a:180deg">Comparing in-stock offers</div><div class="thought" style="--a:270deg">New match found</div></div><div class="agent agent-slot research-agent"></div><div class="thinking-dots"><i></i><i></i><i></i></div><div class="research-complete"><div class="complete-badge">✓</div></div></div>
+  </section>
+
+  <section class="scene firewall" id="scene-firewall-two">
+    <div class="firewall-copy"><div class="eyebrow">Final authorization</div></div>
+    <div class="fire-agent"><div class="agent agent-slot face-right"></div><div class="caption">Shopping Agent</div></div>
+    <article class="transaction-card"><div class="card-top"><span class="card-kicker">Revised transaction</span><span class="auth-id">AUTH · 8F2B</span></div><h2 class="product-name">SwiftRun One</h2><p class="product-meta">Black · EU 43 · true to size</p><div class="card-row"><span>Merchant</span><strong>RunHaus</strong></div><div class="card-row"><span>Order total</span><strong>CHF 189.00</strong></div><div class="card-row"><span>Delivery</span><strong>Thursday</strong></div><div class="card-row"><span>Returns</span><strong>30 days</strong></div></article>
+    <div class="check-wheel" data-run="final"><div class="wheel-line"></div><div class="approved-halo"></div>
+      <div class="criterion" data-result="pass" style="--a:0deg"><b>·</b><span>Product match</span></div><div class="criterion" data-result="pass" style="--a:45deg"><b>·</b><span>Size & fit</span></div><div class="criterion" data-result="pass" style="--a:90deg"><b>·</b><span>Total cost</span></div><div class="criterion" data-result="pass" style="--a:135deg"><b>·</b><span>Shipping cost</span></div><div class="criterion" data-result="pass" style="--a:180deg"><b>·</b><span>Delivery date</span></div><div class="criterion" data-result="pass" style="--a:225deg"><b>·</b><span>Return terms</span></div><div class="criterion" data-result="pass" style="--a:270deg"><b>·</b><span>Merchant trust</span></div><div class="criterion" data-result="pass" style="--a:315deg"><b>·</b><span>No future costs</span></div>
+      <div class="wheel-core"><div class="core-icon">···</div><div class="core-title">Checking</div><div class="core-detail">Verifying the revised purchase</div><div class="core-result">8 checks</div></div>
+    </div>
+  </section>
+</div>
+<div class="progress" aria-hidden="true"><i id="progress"></i></div><div class="logo" aria-label="Viseca">viseca</div><button class="replay" id="replay">Replay</button>
+</main>
+
+<template id="agent-template">
+<svg viewBox="0 0 260 260" role="img" aria-label="A small friendly shopping agent">
+  <g class="leaf"><path d="M159 48c1-26 15-37 37-38 0 20-9 35-31 39z"/><path d="M165 48c14-20 32-19 48-9-8 18-23 25-45 14z"/></g>
+  <path class="foot" d="M92 220c-14 10-15 23 8 23h25c11 0 12-9 2-20"/><path class="foot" d="M153 223c-8 13-1 20 12 20h22c18 0 17-13 3-22"/>
+  <path class="body" d="M48 140c0-61 43-101 103-96 55 5 91 47 86 106-5 61-38 81-96 81-61 0-93-27-93-91z"/><path class="arm" d="M218 145c19-17 30-7 16 7 17-9 23 5 7 15-8 5-14 8-23 10"/>
+  <g class="pupils"><ellipse class="eye" cx="101" cy="106" rx="9" ry="13"/><ellipse class="eye-glint" cx="104" cy="101" rx="3" ry="4"/><ellipse class="eye" cx="148" cy="108" rx="9" ry="13"/><ellipse class="eye-glint" cx="151" cy="103" rx="3" ry="4"/></g>
+  <ellipse class="cheek" cx="167" cy="132" rx="14" ry="8"/><g class="mouth"><path d="M57 123c29 3 47 16 51 36 4 23-13 41-44 43-11-18-16-38-16-62 0-6 3-12 9-17z" fill="#343437" stroke="#343437" stroke-width="4"/><path d="M66 181c10-13 21-17 35-11-5 12-16 20-35 21z" fill="#e98e88"/></g><path class="arm" d="M56 176c-17-2-24 10-14 20 7 7 14 4 21-1"/>
+</svg>
+</template>
+
+<script>
+const $=(s,p=document)=>p.querySelector(s), $$=(s,p=document)=>[...p.querySelectorAll(s)];
+const wait=ms=>new Promise(r=>setTimeout(r,ms)), reduce=matchMedia('(prefers-reduced-motion: reduce)').matches, speed=reduce?.04:1, pause=ms=>wait(ms*speed);
+const track=$('#track'),scenes=$$('.scene'),replay=$('#replay'),bar=$('#progress');let runToken=0;
+const agentMarkup=$('#agent-template').innerHTML;$$('.agent-slot').forEach(el=>el.innerHTML=agentMarkup);
+function go(index){track.style.transform='translate3d('+(-index*100)+'vw,0,0)';scenes.forEach((s,i)=>s.classList.toggle('active',i===index));bar.style.width=((index+1)/scenes.length*100)+'%'}
+function chomp(agent){agent.classList.remove('eating');void agent.offsetWidth;agent.classList.add('eating');setTimeout(()=>agent.classList.remove('eating'),340*speed)}
+async function typePrompt(token){
+  const text='Find and buy black road-running shoes in my size for up to CHF 200. They must arrive by Friday and be returnable for at least 14 days.',typed=$('#typed'),send=$('#send');typed.textContent='';
+  for(const char of text){if(token!==runToken)return;typed.textContent+=char;await pause(char==='.'?55:18)}
+  typed.insertAdjacentHTML('beforeend','<span class="caret"></span>');send.classList.add('ready');await pause(500);send.classList.add('sent');await pause(260)
+}
+async function feedWords(token){
+  const phrases=['black','road-running','EU 43','≤ CHF 200','by Friday','14-day returns'],composer=$('#composer'),agent=$('#intro-agent'),start=composer.getBoundingClientRect(),mouth=agent.querySelector('.mouth').getBoundingClientRect();
+  for(let i=0;i<phrases.length;i++){
+    if(token!==runToken)return;const pill=document.createElement('div');pill.className='flying-word';pill.textContent=phrases[i];document.body.appendChild(pill);
+    const sx=start.left+start.width*(.22+(i%3)*.25),sy=start.top+22+(i%2)*32,tx=mouth.left+mouth.width*.35-sx,ty=mouth.top+mouth.height*.5-sy;pill.style.left=sx+'px';pill.style.top=sy+'px';
+    pill.animate([{transform:'translate(0,0) rotate('+(i%2?-8:9)+'deg) scale(1)',opacity:0},{offset:.18,opacity:1},{transform:'translate('+(tx*.55)+'px,'+(ty*.35+(i%2?-38:28))+'px) rotate('+(i%2?8:-10)+'deg) scale(.92)',opacity:1},{transform:'translate('+tx+'px,'+ty+'px) rotate(0) scale(.18)',opacity:.15}],{duration:760*speed,easing:'cubic-bezier(.3,.7,.2,1)',fill:'forwards'});
+    await pause(510);chomp(agent);await pause(150);pill.remove()
+  }
+  agent.classList.add('happy');await pause(780)
+}
+async function research(scene,token){
+  const orbit=$('.orbit',scene),notes=$$('.thought',scene),agent=$('.agent',scene),complete=$('.research-complete',scene);agent.classList.add('thinking');
+  for(let i=0;i<notes.length;i++){if(token!==runToken)return;orbit.style.setProperty('--turn',(-i*(360/notes.length))+'deg');notes[i].classList.add('show');await pause(700);notes[i].classList.add('done');await pause(260)}
+  agent.classList.remove('thinking');agent.classList.add('happy');complete.classList.add('show');await pause(900);complete.classList.remove('show')
+}
+async function firewall(scene,token,finalRun=false){
+  const card=$('.transaction-card',scene),agent=$('.agent',scene),wheel=$('.check-wheel',scene),nodes=$$('.criterion',scene),icon=$('.core-icon',scene),title=$('.core-title',scene),detail=$('.core-detail',scene),result=$('.core-result',scene);
+  chomp(agent);await pause(180);card.classList.add('arrive');await pause(850);
+  for(let i=0;i<nodes.length;i++){
+    if(token!==runToken)return;wheel.style.setProperty('--spin',(-i*45)+'deg');nodes.forEach(n=>n.classList.remove('active'));const node=nodes[i];node.classList.add('active');icon.textContent='···';icon.removeAttribute('style');title.textContent=node.querySelector('span').textContent;detail.textContent='Checking transaction evidence';result.textContent=(i+1)+' of 8';await pause(410);
+    const outcome=node.dataset.result;node.classList.remove('active');node.classList.add(outcome);node.querySelector('b').textContent=outcome==='pass'?'✓':outcome==='warn'?'?':'×';icon.textContent=outcome==='pass'?'✓':outcome==='warn'?'?':'×';icon.style.background=outcome==='pass'?'var(--gb)':outcome==='warn'?'var(--ab)':'var(--rb)';icon.style.color=outcome==='pass'?'var(--green)':outcome==='warn'?'var(--amber)':'var(--red)';await pause(210)
+  }
+  if(finalRun){wheel.classList.add('approved');icon.textContent='✓';title.textContent='Approved';detail.textContent='Every condition is satisfied';result.textContent='Safe to pay';agent.classList.add('happy');await pause(1500)}
+  else{title.textContent='Revision needed';detail.textContent='Two conditions need attention';result.textContent='Sent back safely';const feedback=$('.feedback',scene);feedback.classList.add('show');await pause(850);feedback.classList.add('returning');agent.classList.add('thinking');await pause(1250)}
+}
+function reset(){
+  $$('.thought').forEach(n=>n.className='thought');$$('.orbit').forEach(n=>n.style.removeProperty('--turn'));$$('.research-complete').forEach(n=>n.classList.remove('show'));$$('.agent').forEach(n=>n.classList.remove('eating','thinking','happy'));$$('.transaction-card').forEach(n=>n.classList.remove('arrive'));
+  $$('.criterion').forEach(n=>{n.classList.remove('active','pass','warn','fail');n.querySelector('b').textContent='·'});$$('.check-wheel').forEach(n=>{n.classList.remove('approved');n.style.removeProperty('--spin')});$$('.feedback').forEach(n=>n.classList.remove('show','returning'));$$('.core-icon').forEach(n=>{n.textContent='···';n.removeAttribute('style')});$$('.core-title').forEach(n=>n.textContent='Checking');$$('.core-result').forEach(n=>n.textContent='8 checks');$('#typed').innerHTML='<span class="caret"></span>';$('#send').classList.remove('ready','sent');replay.classList.remove('show');$$('.flying-word').forEach(n=>n.remove())
+}
+async function run(){const token=++runToken;reset();go(0);await pause(700);await typePrompt(token);if(token!==runToken)return;await feedWords(token);await pause(450);go(1);await pause(1050);await research($('#scene-research'),token);await pause(450);go(2);await pause(1100);await firewall($('#scene-firewall-one'),token,false);await pause(350);go(3);await pause(1050);await research($('#scene-retry'),token);await pause(450);go(4);await pause(1100);await firewall($('#scene-firewall-two'),token,true);if(token===runToken)replay.classList.add('show')}
+replay.addEventListener('click',run);setTimeout(run,500);
+</script>
+</body>
+</html>
