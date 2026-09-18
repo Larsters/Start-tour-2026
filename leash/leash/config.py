@@ -1,0 +1,40 @@
+"""Runtime configuration. Everything is overridable by environment variable."""
+from __future__ import annotations
+
+import os
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+DATA_DIR = Path(os.environ.get("LEASH_DATA_DIR", ROOT.parent / "viseca-2026" / "data"))
+STATE_DIR = Path(os.environ.get("LEASH_STATE_DIR", ROOT / "state"))
+FIXTURES_DIR = ROOT / "fixtures"
+
+# Viseca sandbox
+LEASH_BASE_URL = os.environ.get(
+    "LEASH_BASE_URL",
+    "https://saw26api.ashyground-364e1d07.switzerlandnorth.azurecontainerapps.io",
+)
+TEAM_API_KEY = os.environ.get("TEAM_API_KEY", "")
+
+# Models (verify names against the OpenAI model list on event day)
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+EXTRACTOR_MODEL = os.environ.get("LEASH_EXTRACTOR_MODEL", "gpt-5-mini")
+COMPILER_MODEL = os.environ.get("LEASH_COMPILER_MODEL", "gpt-5")
+EXTRACTOR_TIMEOUT_S = float(os.environ.get("LEASH_EXTRACTOR_TIMEOUT_S", "1.5"))
+MIN_BUDGET_FOR_MODEL_S = float(os.environ.get("LEASH_MIN_BUDGET_FOR_MODEL_S", "2.5"))
+
+# Decision thresholds (all surfaced in receipts)
+THRESHOLDS = {
+    "familiar_before_min": 1,          # "a seller I have bought from before"
+    "familiar_regular_min": 3,         # "a shop I use regularly"
+    "duplicate_window_hours": 24,
+    "duplicate_amount_tolerance": 0.05,
+    "lookalike_min_similarity": 88,    # rapidfuzz ratio 0-100
+    "merchant_trusted_score": 0.6,
+    "merchant_risky_score": 0.4,
+    "trust_escalate": 0.5,
+    "trust_relax": 0.3,
+    "price_sanity_low_factor": 0.5,    # below 50 % of catalogue minimum → suspicious
+    "injection_step_up_level": 2,
+    "familiarity_violation": "decline",  # or "step_up"
+}
