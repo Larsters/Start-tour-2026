@@ -79,14 +79,6 @@ def _404(fn, *a, **kw):
         raise HTTPException(404, f"not found: {e}")
 
 
-@app.get("/")
-def index():
-    """Service index. Without it a browser hitting / just logs a 404."""
-    return {"service": "leash", "docs": "/docs", "health": "/health",
-            "endpoints": sorted({r.path for r in app.routes if r.path not in ("/", "/openapi.json")}),
-            **service.status()}
-
-
 @app.get("/health")
 def health():
     return {"ok": True, **service.status()}
