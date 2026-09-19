@@ -10,13 +10,14 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Literal
 
-from .config import STATE_DIR
+from . import config
 
 CardKind = Literal["question", "confirm_mandate", "step_up", "info"]
 
 
 class Cards:
-    def __init__(self, customer_id: str, state_dir: Path = STATE_DIR):
+    def __init__(self, customer_id: str, state_dir: Path | None = None):
+        state_dir = state_dir or config.STATE_DIR
         self.customer_id = customer_id
         self.path = state_dir / customer_id / "cards.jsonl"
         self.path.parent.mkdir(parents=True, exist_ok=True)

@@ -262,6 +262,36 @@ Render a card's `title`, `body`, `options`, `ref.recommended_action` — never p
 `get_policy`, `get_remaining_budget`, `precheck_cart`, `propose_purchase`,
 `get_merchant_trust`, `explain_decision`. No confirm / tighten / revoke / resolve.
 
+### Judged runs — the procedure (from Viseca: latest completed run per scenario counts)
+What a "run" is: the platform replays one scenario's purchases to our worker as `authorization.request`
+events, one at a time, each with an 8 s deadline (redelivered after 3 s if unanswered). Our worker answers
+approve / decline / step_up; step-ups wait up to 120 s for a human `/resolve`, else they time out. The
+platform keeps every decision with our reason codes and evidence (`GET /v1/authorizations`); there is no
+score and no answer key — judges read the decisions and the evidence.
+
+Before the pitches, in this order, with a human at the app (never `--auto-resolve`):
+1. `uvicorn leash.api:app --port 8080` running with the team key → the worker is polling (check `/health`).
+2. Open `http://localhost:8080/app?customer=CU0001`, then `python -m leash.live --scenario SCEN0000` → 1 purchase, approve.
+3. Repeat for SCEN0001 (CU0001), SCEN0002 (CU0006), SCEN0003 (CU0012), SCEN0004 (CU0019) — switch the app's
+   customer selector to match, and answer each step-up card within 120 s. Decline is the honest answer for the
+   split order, the trail-shoe substitute, the add-on, the duplicate monitor and the injected monitor; approve the
+   "return window not stated" shoe if you would in real life.
+4. `python -m leash.report` → the platform's view of the latest completed run per scenario, matched against our
+   leans, with timing and fallback counts. Fix anything red, re-run that scenario (a new run supersedes the old one).
+
+### Benchmark on the platform (2026-09-19, `python -m leash.report`)
+| Scenario | Platform match vs our leans | avg / max decision time | regex fallbacks | timed out |
+| --- | --- | --- | --- | --- |
+| SCEN0000 | 1/1 | 2058 / 2058 ms | 1 (cold start, now warmed at boot) | 0 |
+| SCEN0001 | 10/10 | 963 / 2225 ms | 0 | 0 |
+| SCEN0002 | 12/12 | 771 / 1436 ms | 0 | 0 |
+| SCEN0003 | 11/11 | 611 / 1155 ms | 0 | 0 |
+| SCEN0004 | 11/11 | 494 / 1396 ms | 0 | 0 |
+
+Decisions with a fresh model call take ~0.9–1.4 s; repeated product text is cached and decides in ~2 ms. All
+under the 3 s redelivery window and the 8 s deadline. These runs answered step-ups automatically for the
+benchmark; the judged runs must be repeated with a human answering the cards (procedure above).
+
 ### Known limits
 - Web reputation for a made-up seller name can match unrelated businesses; a "suspicious" verdict only declines at high confidence, otherwise the seller stays "unknown" → containment step-up.
 - Advisor lookups add 5–10 s to `/propose`; the chatbot should show a "checking…" state. They never run on the sponsor's 8 s path.

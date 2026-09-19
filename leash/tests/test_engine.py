@@ -36,7 +36,7 @@ def test_idempotent_redelivery(r):
     assert [x["decision"] for x in first] == [x["decision"] for x in again]
     # the ledger did not double-count: re-running with fresh=False returned stored receipts, not re-evaluations
     from leash.ledger import Ledger
-    led = Ledger("CU0019")
+    led = Ledger("CU0019", config.STATE_DIR)
     assert len(led.rows_for_mandate("TM_OFFLINE_SCEN0004")) == 11
 
 

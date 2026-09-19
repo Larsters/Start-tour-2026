@@ -9,7 +9,7 @@ from typing import Any
 
 import yaml
 
-from .config import STATE_DIR
+from . import config
 from .models import CompiledMandate
 
 
@@ -21,7 +21,8 @@ def _split_front_matter(text: str) -> tuple[dict[str, Any], str]:
 
 
 class CustomerState:
-    def __init__(self, customer_id: str, state_dir: Path = STATE_DIR):
+    def __init__(self, customer_id: str, state_dir: Path | None = None):
+        state_dir = state_dir or config.STATE_DIR
         self.customer_id = customer_id
         self.dir = state_dir / customer_id
         (self.dir / "mandates").mkdir(parents=True, exist_ok=True)

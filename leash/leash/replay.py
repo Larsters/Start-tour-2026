@@ -80,6 +80,9 @@ def replay(scenario_id: str, *, ref: ReferenceData | None = None, mandate: Compi
     mandate_id = f"TM_OFFLINE_{scenario_id}"
     events = build_events(scenario_id, ref, mandate_id)
     customer_id = events[0]["mandate"]["customer_id"]
+    # Offline replays live in their own scratch tree; the live ledgers are never touched.
+    if not str(config.STATE_DIR).endswith("_offline"):
+        config.STATE_DIR = config.STATE_DIR / "_offline"
     if fresh:
         shutil.rmtree(config.STATE_DIR / customer_id, ignore_errors=True)
     m = mandate or compile_rules(ref.scenarios[scenario_id]["cardholder_instruction"])

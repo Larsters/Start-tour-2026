@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from .config import STATE_DIR
+from . import config
 
 
 def _ts(s: str) -> datetime:
@@ -15,7 +15,8 @@ def _ts(s: str) -> datetime:
 
 
 class Ledger:
-    def __init__(self, customer_id: str, state_dir: Path = STATE_DIR):
+    def __init__(self, customer_id: str, state_dir: Path | None = None):
+        state_dir = state_dir or config.STATE_DIR
         self.customer_id = customer_id
         self.path = state_dir / customer_id / "ledger.jsonl"
         self.path.parent.mkdir(parents=True, exist_ok=True)

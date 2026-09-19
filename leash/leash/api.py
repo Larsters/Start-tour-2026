@@ -24,6 +24,11 @@ log = logging.getLogger("leash.api")
 async def lifespan(app: FastAPI):
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
     app.state.worker = None
+    if service.config.OPENAI_API_KEY:
+        # warm the extractor path once so the first live decision does not pay the cold-start and fall back to regex
+        import threading
+        from .quarantine import extract
+        threading.Thread(target=lambda: extract("warm-up item", "warm-up text; returns accepted within 30 days", allow_model=True, budget_s=10), daemon=True).start()
     if service.client().configured:
         app.state.worker = Worker(service.client())
         app.state.worker.start()

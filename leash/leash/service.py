@@ -215,7 +215,7 @@ def precheck(customer_id: str, mandate_id: str, cart: dict[str, Any], advise: bo
         if real_ledger.path.exists():
             shutil.copy(real_ledger.path, scratch.path)
         orig = L.Ledger.__init__
-        L.Ledger.__init__ = lambda self, cid, state_dir=__import__("pathlib").Path(tmp): orig(self, cid, state_dir)  # type: ignore
+        L.Ledger.__init__ = lambda self, cid, state_dir=None: orig(self, cid, __import__("pathlib").Path(tmp))  # type: ignore
         try:
             r = decide(ev, allow_model=bool(config.OPENAI_API_KEY), hints=hints)
         finally:
@@ -316,7 +316,7 @@ def dry_run(customer_id: str, draft_id: str, *, limit: int = 60) -> dict[str, An
     tmp = Path(tempfile.mkdtemp(prefix="leash_dryrun_"))
     scratch_mandate_id = f"TM_DRYRUN_{draft_id}"
     orig = L.Ledger.__init__
-    L.Ledger.__init__ = lambda self, cid, state_dir=tmp: orig(self, cid, state_dir)  # type: ignore
+    L.Ledger.__init__ = lambda self, cid, state_dir=None: orig(self, cid, tmp)  # type: ignore
     counts = {"approve": 0, "step_up": 0, "decline": 0}
     samples: list[dict[str, Any]] = []
     try:

@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import os
 import json
 import logging
 import sys
@@ -110,6 +111,8 @@ def main(argv=None):
     ap.add_argument("--llm-compiler", action="store_true")
     ap.add_argument("--auto-resolve", choices=["approve", "decline"], default=None)
     a = ap.parse_args(argv)
+    if a.auto_resolve and os.environ.get("LEASH_ALLOW_AUTO_RESOLVE") != "1":
+        sys.exit("--auto-resolve invents a human answer (forbidden for judged runs). For a benchmark only, set LEASH_ALLOW_AUTO_RESOLVE=1.")
     logging.basicConfig(level=logging.WARNING)
     expected = int(ref().scenarios[a.scenario]["event_count"])
     run_id, mandate_id, customer_id = setup_run(a.scenario, reset=a.reset, prefer_llm=a.llm_compiler)
