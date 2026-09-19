@@ -38,7 +38,7 @@ class Cards:
     def create(self, kind: CardKind, title: str, body: str, *, options: list[str] | None = None,
                ref: dict[str, Any] | None = None, deadline: str | None = None) -> dict[str, Any]:
         row = {"id": f"card_{uuid.uuid4().hex[:10]}", "kind": kind, "title": title, "body": body,
-               "options": options or ["approve", "decline"], "ref": ref or {}, "status": "pending",
+               "options": options or ["approve", "decline"], "ref": ref or {}, "status": "shown" if kind == "info" else "pending",
                "answer": None, "created_at": datetime.now().astimezone().isoformat(), "deadline": deadline}
         self._append(row)
         return row
@@ -54,7 +54,15 @@ class Cards:
         return row
 
     def pending(self) -> list[dict[str, Any]]:
-        return [r for r in self._all().values() if r["status"] == "pending"]
+        return [r for r in self._all().values() if r["status"] == "pending" and r["kind"] != "info"]
+
+    def dismiss(self, card_id: str) -> dict[str, Any] | None:
+        row = self._all().get(card_id)
+        if not row:
+            return None
+        row = {**row, "status": "dismissed"}
+        self._append(row)
+        return row
 
     def get(self, card_id: str) -> dict[str, Any] | None:
         return self._all().get(card_id)

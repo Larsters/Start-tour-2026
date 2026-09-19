@@ -34,12 +34,12 @@ const sleep=ms=>new Promise(r=>origST(r,ms));
   $('#core').click();rep.push(['history open',$('#history').classList.contains('open')]);
   const approve=$$('.hist-item').find(h=>h.querySelector('.badge').textContent==='approve');approve.click();
   await sleep(1500);
-  rep.push(['after replay: title',$('#title').textContent.slice(0,40),'| core',$('#core-title').textContent,'| nodes',$$('.criterion').length,'| approved halo',$('#wheel').classList.contains('approved')]);
+  rep.push(['after replay: verdict',$('#verdict').textContent.slice(0,40),'| core',$('#core-title').textContent,'| nodes',$$('.criterion').length,'| approved halo',$('#wheel').classList.contains('approved')]);
   // click a node → reasoning in core
   const node=$$('.criterion')[0];node.click();rep.push(['node click →',$('#core-title').textContent,'/',$('#core-detail').textContent.slice(0,60)]);
   // replay compile entry
   $('#core').click();$$('.hist-item').find(h=>h.querySelector('.badge').textContent==='compile').click();await sleep(300);
-  rep.push(['compile replay →',$('#core-title').textContent,'|',$('#title').textContent.slice(0,40)]);
+  rep.push(['compile replay →',$('#core-title').textContent]);
   for(const r of rep)console.log(' -',r.join(' '));
   console.log(errors.length?'\nERRORS:\n'+errors.join('\n'):'\nno JS errors');
   process.exit(errors.length?1:0);

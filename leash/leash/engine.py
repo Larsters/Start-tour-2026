@@ -40,9 +40,6 @@ def combine(evidence: list[ClauseResult], uncertainty_policy: str) -> tuple[Deci
     inj = [c for c in fails if c.clause == "injection"]
     if hard:
         return "decline", [c.clause for c in hard] + [c.clause for c in soft]
-    if inj and (soft or unknowns) and len(soft) + len(unknowns) > 1:
-        # injection plus any other failing/unknown clause: the text was trying to cover for something
-        return "decline", [c.clause for c in soft] + [c.clause for c in unknowns]
     if soft:
         return "step_up", [c.clause for c in soft] + [c.clause for c in unknowns]
     if unknowns:
@@ -67,12 +64,12 @@ def _message(decision: Decision, ev: AuthorizationEvent, evidence: list[ClauseRe
 
 def decide(ev: AuthorizationEvent, *, run_id: str | None = None, mandate: CompiledMandate | None = None,
            ref: ReferenceData | None = None, allow_model: bool = True, now: datetime | None = None,
-           hints: "Hints | None" = None) -> Receipt:
+           hints: "Hints | None" = None, ledger: Ledger | None = None, alternative: dict[str, Any] | None = None) -> Receipt:
     t0 = time.perf_counter()
     ref = ref or default_ref()
     a = ev.authorization
     state = CustomerState(ev.mandate.customer_id)
-    ledger = Ledger(ev.mandate.customer_id)
+    ledger = ledger or Ledger(ev.mandate.customer_id)
 
     # 1. idempotency
     prev = ledger.get(a.authorization_id)
@@ -104,7 +101,7 @@ def decide(ev: AuthorizationEvent, *, run_id: str | None = None, mandate: Compil
             mt.band = "risky"
         elif rep["verdict"] == "suspicious":
             mt.inputs["web_reputation"]["note"] = "low-confidence suspicion; treated as unknown → containment"
-        elif rep["verdict"] == "reputable" and mt.band == "unknown" and mt.score >= 0.5:
+        elif rep["verdict"] == "reputable" and mt.band == "unknown" and (mt.score >= 0.5 or rep.get("confidence") == "high"):
             mt.band = "trusted"
     signals = session_signals(
         device_id=a.customer_device_id, hour=a.timestamp.hour,
@@ -124,6 +121,8 @@ def decide(ev: AuthorizationEvent, *, run_id: str | None = None, mandate: Compil
     for c in (C.addons(a, facts, intent), C.subscription_term(a, facts, intent), C.deliver_by(a, intent),
               C.fulfillment(a, intent), C.retailer_type(a, intent), C.seller_familiarity(a, intent, baseline)):
         if c: ev_list.append(c)
+    if (hf := C.hidden_fee(a, facts)):
+        ev_list.append(hf)
     ev_list += C.price_sanity(a, ref, market=hints.market_range_chf if hints else None)
     if hints and hints.size_advice:
         ev_list.append(C.sizing_advice(a, hints.size_advice, intent))
@@ -151,15 +150,23 @@ def decide(ev: AuthorizationEvent, *, run_id: str | None = None, mandate: Compil
         action = RecommendedAction(type="one_time_card", cap_chf=a.billing_amount_chf, merchant_id=a.merchant.merchant_id,
                                    note="seller could not be verified; contain exposure to this amount and this seller")
     advice: list[str] = []
+    suspect = any(c.clause == "price_sanity" and c.status == "fail" for c in ev_list) and mt.band != "trusted"
+    if suspect:
+        advice.insert(0, "This item is most likely a fake: the price is far below market and the seller could not be verified.")
     if mt.inputs.get("refund_rate", 0) > 0.1:
         advice.append(f"{a.merchant.merchant_name} has a {mt.inputs['refund_rate']:.0%} refund rate across the issuer's cards.")
     prefs = ref.customer_preferences(ev.mandate.customer_id)
     if prefs and any(it.item_category == "gift_card" for it in a.items) and "gift voucher" in prefs.lower():
         advice.append("Your profile notes that you avoid gift vouchers.")
 
+    msg = _message(decision, ev, ev_list, action)
+    if suspect and decision != "approve":
+        msg = "Warning: this is most likely a fake. " + msg
+    if alternative and decision != "approve":
+        msg += f" Alternative: {alternative['name']} from {alternative['seller']} for CHF {alternative['price_chf']:.2f}, delivered by {alternative['delivery_by']}."
     receipt = Receipt(
         authorization_id=a.authorization_id, decision=decision, reason_codes=codes,
-        customer_message=_message(decision, ev, ev_list, action), evidence=ev_list, advice=advice,
+        customer_message=msg, evidence=ev_list, advice=advice, alternative=alternative if decision != "approve" else None,
         recommended_action=action, engine_version=ENGINE_VERSION, degraded=degraded,
         elapsed_ms=int((time.perf_counter() - t0) * 1000),
     )

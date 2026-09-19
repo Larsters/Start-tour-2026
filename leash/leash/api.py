@@ -161,6 +161,14 @@ def cards(customer_id: str, pending_only: bool = True):
     return c.pending() if pending_only else c.list()
 
 
+@app.post("/cards/{card_id}/dismiss")
+def dismiss(card_id: str, customer_id: str):
+    row = Cards(customer_id).dismiss(card_id)
+    if not row:
+        raise HTTPException(404, f"not found: {card_id}")
+    return row
+
+
 @app.post("/cards/{card_id}/answer")
 def answer(card_id: str, customer_id: str, body: AnswerIn):
     return _404(service.answer_card, customer_id, card_id, body.answer, body.note)
@@ -204,8 +212,13 @@ def chat(body: ChatIn):
 def chat_reset(customer_id: str, wipe_state: bool = False):
     agent.reset(customer_id)
     if wipe_state:
+        # wipe mandates, cards, ledger, questions — but keep knowledge.md (advisor cache) so a rehearsed demo runs warm
         import shutil
-        shutil.rmtree(service.config.STATE_DIR / customer_id, ignore_errors=True)
+        d = service.config.STATE_DIR / customer_id
+        for child in d.glob("*") if d.exists() else []:
+            if child.name == "knowledge.md":
+                continue
+            shutil.rmtree(child, ignore_errors=True) if child.is_dir() else child.unlink(missing_ok=True)
     events.publish(customer_id, "session.reset")
     return {"ok": True}
 

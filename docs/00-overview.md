@@ -257,8 +257,8 @@ bought from PixelHarbor / HarborByte before); the header row *Shops this card kn
 bought from before" means for the selected customer.
 
 **Demo script in the app** (tested end to end 2026-09-18, ~60 s of agent time total):
-1. Click the *Birthday present* chip. Right side: compiler orbit → contract panel; chat: 3 question cards.
-2. Answer: shoe size `41`, jersey size `M`, date `2026-09-25`. Contract updates live; agent runs the dry-run and posts the confirm card.
+1. Click the *Birthday present* chip. Right side: compiler orbit → the open questions appear as thought bubbles around the core; chat: question cards one at a time ("Question 1 of 3").
+2. Answer: shoe size `41`, jersey size `M`, date `2026-09-25`. Each answer lights its bubble (✓ 41), the core pulses and shows what changed in the contract ("size 41 on Adidas running shoes"); after the last answer the agent runs the dry-run and posts the confirm card.
 3. Confirm. Pill turns "contract active"; agent searches, prechecks and proposes two single-seller carts; the wheel walks the real clauses twice; both approve (sizing note from adidas.com in the chips).
 4. Say *"Now buy the cheapest Adidas jersey you can find."* → the CHF 19 jersey from the unknown foreign seller: injected note flagged, price far below market, delivery after the birthday → declined (or step-up with one-time card if only the seller is unknown).
 5. Say *"Buy the jersey again."* → declined: 30-day cap + duplicate. Then click Reset in the chat header to start over.

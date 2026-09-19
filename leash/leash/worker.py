@@ -22,12 +22,15 @@ def make_step_up_card(customer_id: str, ev: AuthorizationEvent, r: Receipt) -> d
     options = ["approve", "decline"]
     if r.recommended_action:
         options = ["approve_one_time_card", "approve", "decline"]
+    if r.alternative:
+        options = ["buy_alternative"] + [o for o in options if o != "approve"]
     body = "\n".join(f"• {p}" for p in problems) or r.customer_message
     return Cards(customer_id).create(
         "step_up", f"Confirm CHF {a.billing_amount_chf:.2f} at {a.merchant.merchant_name}?",
         body, options=options,
         ref={"authorization_id": a.authorization_id, "mandate_id": a.mandate_id, "customer_message": r.customer_message,
-             "recommended_action": r.recommended_action.model_dump() if r.recommended_action else None,
+             "recommended_action": r.recommended_action.model_dump() if r.recommended_action else None, "alternative": r.alternative,
+             "advice": r.advice,
              "items": [f"{it.quantity}× {it.item_name}" for it in a.items]},
     )
 
@@ -61,7 +64,7 @@ def resolve_card(client: VisecaClient, customer_id: str, card: dict, answer: str
     from .engine import resolve
     auth_id = card["ref"]["authorization_id"]
     decision = "approve" if answer.startswith("approve") else "decline"
-    msg = {"approve": "The customer confirmed this purchase.",
+    msg = {"buy_alternative": "The customer declined this seller and chose the official-store alternative.", "approve": "The customer confirmed this purchase.",
            "approve_one_time_card": "The customer approved this purchase with a one-time virtual card capped at the order amount for this seller only.",
            "decline": "The customer rejected this purchase."}.get(answer, note or "Customer answered.")
     resolve(customer_id, auth_id, decision, msg)
@@ -69,6 +72,14 @@ def resolve_card(client: VisecaClient, customer_id: str, card: dict, answer: str
     if answer == "approve_one_time_card" and card["ref"].get("recommended_action"):
         evidence = [{"clause": "containment", "status": "info", "summary": "one-time virtual card", **card["ref"]["recommended_action"]}]
     out = client.resolve(auth_id, decision, msg, evidence) if client.configured else {"offline": True}
+    if decision == "approve":
+        ref = card["ref"]
+        how = "approved by you" + (" with a one-time virtual card capped at CHF %.2f" % ref["recommended_action"]["cap_chf"] if answer == "approve_one_time_card" and ref.get("recommended_action") else "")
+        title = card["title"].replace("Confirm ", "Order placed · ").rstrip("?")
+        body = "\n".join("• " + l.lstrip("• ") for l in card.get("body", "").split("\n") if l.strip())
+        Cards(customer_id).create("info", title, f"{how}.\nAuthorization {auth_id}\nYou accepted these warnings:\n{body}" if body else f"{how}.\nAuthorization {auth_id}",
+                                  options=[], ref={"kind": "receipt", "authorization_id": auth_id, "mandate_id": ref.get("mandate_id")})
+        events.publish(customer_id, "order.placed", card={"title": title, "authorization_id": auth_id})
     return {"authorization_id": auth_id, "decision": decision, "platform": out}
 
 

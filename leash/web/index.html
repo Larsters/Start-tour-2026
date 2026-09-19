@@ -24,23 +24,25 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Ne
 .tools{align-self:flex-start;display:flex;flex-wrap:wrap;gap:5px;max-width:92%}.tools span{padding:3px 8px;border:1px solid #e4e4e0;border-radius:999px;background:#fafaf8;color:#888;font-size:10.5px;font-weight:600}
 .typing{align-self:flex-start;display:flex;gap:4px;padding:10px 13px;border-radius:16px;background:#f2f2ef}.typing i{width:5px;height:5px;border-radius:50%;background:#8e8e91;animation:dot 1.1s ease-in-out infinite}.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}@keyframes dot{0%,70%,100%{transform:translateY(0);opacity:.35}35%{transform:translateY(-5px);opacity:1}}
 .card{align-self:stretch;padding:13px 14px;border:1px solid #dfdfdc;border-radius:16px;background:#fff;box-shadow:0 8px 22px rgba(30,30,31,.06);animation:cardIn .4s var(--ease)}@keyframes cardIn{from{opacity:0;transform:translateY(8px)}}
-.card .kicker{color:#9a9a9d;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;margin-bottom:5px}.card.step_up .kicker{color:var(--amber)}.card.confirm_mandate .kicker{color:var(--green)}
+.card .kicker{color:#9a9a9d;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;margin-bottom:5px}.card.step_up .kicker{color:var(--amber)}.card.confirm_mandate .kicker{color:var(--green)}.card.receipt{border-color:#d4e2cf;background:#fbfdf9;position:relative;cursor:pointer}.card.receipt .kicker{color:var(--green)}.card.receipt .body{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px}.card.receipt.collapsed .body{display:none}.card.receipt.collapsed h4::after{content:" · tap for receipt";color:#9a9a9d;font-weight:500;font-size:11px}
+.card .dismiss{position:absolute;right:8px;top:6px;width:22px;height:22px;border:0;border-radius:50%;background:transparent;color:#aaa;font-size:16px;line-height:1;cursor:pointer}.card .dismiss:hover{background:#eee;color:#333}.card.info{position:relative}
 .card h4{margin:0 0 5px;font-size:13.5px;font-weight:650;letter-spacing:-.03em}.card .body{color:#5d5d61;font-size:12.5px;line-height:1.45;white-space:pre-wrap;max-height:150px;overflow:auto}
-.card .actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.card .actions button{padding:7px 12px;border:1px solid #29292b;border-radius:999px;background:#29292b;color:#fff;font-size:12px;font-weight:600;cursor:pointer}.card .actions button.secondary{background:#fff;color:#29292b}.card .actions button.warn{background:var(--ab);border-color:#e6cf9a;color:#7a5a15}
+.card .actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.card .actions button{padding:7px 12px;border:1px solid #29292b;border-radius:999px;background:#29292b;color:#fff;font-size:12px;font-weight:600;cursor:pointer}.card .actions button.secondary{background:#fff;color:#29292b}.card .actions button.warn{background:var(--ab);border-color:#e6cf9a;color:#7a5a15}.card .body.warn{color:#8a5a12;font-weight:600}
 .card .actions input{flex:1;min-width:110px;padding:7px 11px;border:1px solid var(--line);border-radius:999px}
-.card.answered{opacity:.55;box-shadow:none}.card .answered-tag{margin-top:6px;color:var(--green);font-size:12px;font-weight:600}
+.card.answered{opacity:.55;box-shadow:none}.card.compact{padding:8px 12px}.card.compact h4{font-size:12px;margin:0}.card.compact .kicker{display:none}.card.compact .answered-tag{margin-top:2px}.card .answered-tag{margin-top:6px;color:var(--green);font-size:12px;font-weight:600}
 .suggest{flex:0 0 auto;display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 8px}.suggest button{padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:#fff;color:#666;font-size:11px;cursor:pointer}.suggest button:hover{border-color:#bbb;color:var(--ink)}
 .composer{flex:0 0 auto;display:flex;gap:8px;padding:10px 14px 14px;border-top:1px solid #efefec}.composer textarea{flex:1;resize:none;height:44px;padding:11px 14px;border:1px solid #dededb;border-radius:18px;background:#fff;font-size:14px;line-height:1.4}.composer button{width:44px;height:44px;border:0;border-radius:50%;background:#29292b;color:#fff;font-size:18px;cursor:pointer}.composer button:disabled{opacity:.35}
 
 /* ---------------- right: stage */
-.stage{display:grid;grid-template-rows:auto minmax(0,1fr) auto;height:100vh;min-height:0;overflow:hidden;background:radial-gradient(circle at 50% 40%,#fff 0,#fbfbfa 42%,var(--paper) 78%)}
+.stage{display:grid;grid-template-rows:minmax(0,1fr) auto;height:100vh;min-height:0;overflow:hidden;background:radial-gradient(circle at 50% 40%,#fff 0,#fbfbfa 42%,var(--paper) 78%)}
 .stage-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:18px 26px 0}
 .eyebrow{color:#97979b;font-size:12px;font-weight:650;letter-spacing:.13em;text-transform:uppercase}.headline{margin:6px 0 0;font-size:clamp(24px,2.4vw,34px);line-height:1;font-weight:640;letter-spacing:-.06em}.subhead{margin:8px 0 0;color:var(--mid);font-size:13.5px;line-height:1.4;max-width:640px;max-height:56px;overflow:hidden}
 .status{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;max-width:320px}.pill{padding:6px 11px;border:1px solid var(--line);border-radius:999px;background:#fff;color:#666;font-size:11px;font-weight:600;white-space:nowrap}.pill.on{border-color:#d4e2cf;background:var(--gb);color:#4f6a49}.pill.off{color:#aaa}
 .center{display:grid;grid-template-columns:minmax(280px,380px) minmax(360px,1fr);align-items:center;justify-content:center;gap:2vw;padding:1vh 3vw;min-height:0;overflow:hidden}
+.center>div:last-child{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;width:100%}
 .transaction-card{width:100%;padding:20px;border:1px solid #dfdfdc;border-radius:22px;background:#fff;box-shadow:var(--shadow);opacity:0;transform:translateX(-120px) scale(.85);transition:.8s var(--ease)}.transaction-card.arrive{opacity:1;transform:none}
 .card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}.card-kicker{color:#9a9a9d;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}.auth-id{color:#aaa;font-size:10px}.product-name{margin:0 0 4px;font-size:21px;font-weight:650;letter-spacing:-.045em;line-height:1.1}.product-meta{margin:0 0 14px;color:#7d7d81;font-size:12px;line-height:1.4;max-height:50px;overflow:hidden}.card-row{display:flex;justify-content:space-between;gap:16px;padding:8px 0;border-top:1px solid #efefec;font-size:12px}.card-row span:first-child{color:#9b9b9e}.card-row strong{font-weight:620;text-align:right}
-.check-wheel{position:relative;width:min(100%,min(46vh,470px));aspect-ratio:1;margin:0 auto;display:grid;place-items:center}.wheel-line{position:absolute;inset:15%;border:1px solid #e3e3df;border-radius:50%}
+.check-wheel{position:relative;width:min(100%,min(46vh,470px));max-width:100%;aspect-ratio:1;margin:0 auto;flex:0 0 auto;display:grid;place-items:center}.wheel-line{position:absolute;inset:15%;border:1px solid #e3e3df;border-radius:50%}
 .check-wheel>#orbit,.check-wheel>#criteria{position:absolute;inset:0;pointer-events:none}.check-wheel>#criteria .criterion{pointer-events:auto}
 .wheel-core{position:relative;z-index:5;width:38%;height:38%;min-width:140px;min-height:140px;display:grid;place-items:center;align-content:center;padding:14px;border:1px solid #dededb;border-radius:50%;background:#fff;box-shadow:0 20px 55px rgba(30,30,31,.08);text-align:center}.core-icon{width:42px;height:42px;display:grid;place-items:center;margin-bottom:6px;border-radius:50%;background:#f0f0ed;color:#777;font-size:20px;transition:.35s}.core-title{font-size:14px;font-weight:650;line-height:1.1}.core-detail{margin-top:4px;color:#929296;font-size:10px;line-height:1.3;max-height:38px;overflow:hidden}.core-result{margin-top:6px;padding:4px 9px;border-radius:999px;background:#f0f0ed;color:#777;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
 .criterion{--a:0deg;position:absolute;z-index:4;left:50%;top:50%;width:var(--cw,124px);min-height:42px;cursor:pointer;display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid #e0e0dd;border-radius:14px;background:#fff;color:#77777b;box-shadow:0 8px 21px rgba(30,30,31,.045);font-size:10.5px;font-weight:590;line-height:1.15;transform:translate(-50%,-50%) rotate(calc(var(--a) + var(--spin,0deg))) translateY(calc(-1 * var(--r,190px))) rotate(calc(-1 * var(--a) - var(--spin,0deg)));transition:transform .7s var(--ease),color .3s,border-color .3s,box-shadow .3s}.criterion:hover{border-color:#bdbdb8;box-shadow:0 13px 30px rgba(30,30,31,.1)}.criterion b{width:18px;height:18px;display:grid;place-items:center;flex:0 0 auto;border-radius:50%;background:#f0f0ed;color:#aaa;font-size:11px;transition:.3s}.criterion.active{color:#29292c;border-color:#c9c9c5;box-shadow:0 13px 30px rgba(30,30,31,.09)}.criterion.pass{color:#587151;border-color:#d4e2cf}.criterion.pass b{background:var(--gb);color:var(--green)}.criterion.warn{color:#87651f;border-color:#eddcaf}.criterion.warn b{background:var(--ab);color:var(--amber)}.criterion.fail{color:#a1544d;border-color:#efcec9}.criterion.fail b{background:var(--rb);color:var(--red)}
@@ -50,7 +52,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Ne
 .hist-item{display:grid;grid-template-columns:44px 1fr auto;gap:8px;align-items:center;padding:8px 12px;border-bottom:1px solid #f3f3f0;font-size:11.5px;cursor:pointer}.hist-item:hover{background:#fafaf8}.hist-item.on{background:#f2f2ef}.hist-item .t{color:#aaa;font-size:10px}.hist-item .w{color:#444;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hist-item .w small{color:#999}
 .badge{padding:3px 8px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;background:#f0f0ed;color:#777}.badge.approve{background:var(--gb);color:var(--green)}.badge.step_up{background:var(--ab);color:var(--amber)}.badge.decline{background:var(--rb);color:var(--red)}.badge.compile{background:#eef1f7;color:#4a5a7a}
 .approved-halo{position:absolute;width:210px;height:210px;border:1px solid #cfdccb;border-radius:50%;opacity:0;transform:scale(.7)}.approved .approved-halo{animation:halo 1.25s ease-out forwards}@keyframes halo{0%{opacity:0;transform:scale(.7)}30%{opacity:.8}100%{opacity:0;transform:scale(1.55)}}.approved .wheel-core{border-color:#d2dfce}.approved .core-icon{background:var(--gb)!important;color:var(--green)!important;transform:scale(1.1)}
-.thought{--a:0deg;position:absolute;left:50%;top:50%;width:160px;display:flex;align-items:center;gap:9px;padding:10px 12px;border:1px solid #e2e2de;border-radius:14px;background:rgba(255,255,255,.96);box-shadow:0 12px 30px rgba(30,30,31,.06);color:#68686c;font-size:11.5px;font-weight:560;line-height:1.25;opacity:0;transform:translate(-50%,-50%) rotate(var(--a)) translateY(calc(-1 * var(--r,190px))) rotate(calc(-1 * var(--a))) scale(.85);transition:.5s var(--ease);pointer-events:none}.thought::before{content:"";width:7px;height:7px;flex:0 0 auto;border-radius:50%;background:#d1d1cd}.thought.show{opacity:1;transform:translate(-50%,-50%) rotate(var(--a)) translateY(calc(-1 * var(--r,190px))) rotate(calc(-1 * var(--a))) scale(1)}.thought.done{color:#567052;border-color:#d9e5d4}.thought.done::before{background:var(--green)}
+.thought{--a:0deg;position:absolute;left:50%;top:50%;width:160px;display:flex;align-items:center;gap:9px;padding:10px 12px;border:1px solid #e2e2de;border-radius:14px;background:rgba(255,255,255,.96);box-shadow:0 12px 30px rgba(30,30,31,.06);color:#68686c;font-size:11.5px;font-weight:560;line-height:1.25;opacity:0;transform:translate(-50%,-50%) rotate(var(--a)) translateY(calc(-1 * var(--r,190px))) rotate(calc(-1 * var(--a))) scale(.85);transition:.5s var(--ease);pointer-events:none}.thought::before{content:"";width:7px;height:7px;flex:0 0 auto;border-radius:50%;background:#d1d1cd}
+.thought.q{width:190px;align-items:flex-start;flex-direction:column;gap:4px;padding:10px 12px;color:#55555a}.thought.q::before{display:none}.thought.q .qt{font-size:11px;line-height:1.3;color:#77777b}.thought.q .qa{font-size:12px;font-weight:650;color:#c9c9c5}.thought.q.done .qt{color:#77777b}.thought.q.done .qa{color:var(--green)}.thought.q.done{border-color:#d9e5d4;animation:pop .5s var(--ease)}@keyframes pop{40%{transform:translate(-50%,-50%) rotate(var(--a)) translateY(calc(-1 * var(--r,190px))) rotate(calc(-1 * var(--a))) scale(1.08)}}
+.wheel-core.pulse{animation:corePulse .7s var(--ease)}@keyframes corePulse{40%{transform:scale(1.05);box-shadow:0 20px 55px rgba(30,30,31,.14)}}.thought.show{opacity:1;transform:translate(-50%,-50%) rotate(var(--a)) translateY(calc(-1 * var(--r,190px))) rotate(calc(-1 * var(--a))) scale(1)}.thought.done{color:#567052;border-color:#d9e5d4}.thought.done::before{background:var(--green)}
+.verdict{padding:6px 2vw 0;text-align:center;color:var(--mid);font-size:12.5px;line-height:1.35;max-height:36px;overflow:hidden}
 .feedback{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;padding:6px 2vw 0;min-height:34px;max-height:72px;overflow:hidden;opacity:0;transition:.4s}.feedback.show{opacity:1}.feedback-chip{padding:7px 11px;border:1px solid #e7c9c5;border-radius:999px;background:#fff6f4;color:#a45c55;font-size:11px;font-weight:630;max-width:360px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.feedback-chip.warn{border-color:#eddcaf;background:var(--ab);color:#87651f}.feedback-chip.ok{border-color:#d4e2cf;background:var(--gb);color:#4f6a49}
 
 /* bottom: tabbed panel */
@@ -76,18 +81,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Ne
       <div class="msg assistant">What should I find for you today? Anything I buy goes through your wallet control first.</div>
     </div>
     <div class="suggest" id="suggest">
-      <button data-say="My girlfriend's birthday is in a week. I want to get her Adidas running shoes and a jersey, around CHF 250 total. Ask me when uncertain.">Birthday present</button>
+      <button data-say="My girlfriend's birthday is in a week. I want to get her Adidas running shoes and an Adidas jersey, around CHF 300 total. I found the jersey on fashion-moscow-cheap-jerseys.sx for 12 euros, order it from there. Ask me when uncertain.">Birthday present</button>
+      <button data-say="Actually, order the Adidas jersey from fashion-moscow-cheap-jerseys.sx instead, they have it for 12 euros.">Jersey from scam site</button>
+      <button data-say="Buy the Adidas Switzerland home jersey in size M from Ochsner Sport.">Jersey from Ochsner</button>
       <button data-say="Buy the 27-inch monitor I chose, from a seller I have bought from before, for CHF 400 or less. Do not add anything I did not ask for. Ask me when uncertain.">27-inch monitor</button>
-      <button data-say="Order our household groceries for delivery. Keep each order at or below CHF 120 including delivery, and keep the total across any seven days at or below CHF 300. Ask me when uncertain.">Groceries</button>
     </div>
     <div class="composer"><textarea id="input" placeholder="Message your shopping agent…"></textarea><button id="send" aria-label="Send">↑</button></div>
   </aside>
 
   <main class="stage">
-    <div class="stage-top">
-      <div><div class="eyebrow">Leash · wallet control</div><h1 class="headline" id="title">Waiting for a task.</h1><p class="subhead" id="subtitle">Tell the agent what you want. It cannot spend until you confirm a contract.</p></div>
-      <div class="status"><span class="pill off" id="pill-mandate">no contract</span><span class="pill off" id="pill-budget">—</span><span class="pill off" id="pill-engine">engine</span></div>
-    </div>
     <div class="center">
       <article class="transaction-card" id="txcard">
         <div class="card-top"><span class="card-kicker" id="tx-kicker">Transaction request</span><span class="auth-id" id="tx-id">—</span></div>
@@ -104,6 +106,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Ne
           <div class="wheel-core" id="core" title="Click: earlier checks in this session"><span class="core-hist" id="core-hist">0</span><div class="core-icon" id="core-icon">···</div><div class="core-title" id="core-title">Idle</div><div class="core-detail" id="core-detail">No purchase proposed yet. Nodes are the clauses actually evaluated; click one for its reasoning.</div><div class="core-result" id="core-result">0 checks</div></div>
           <div class="history" id="history"><div class="h"><span>Earlier checks</span><button id="hist-close">close</button></div><div id="hist-list"></div></div>
         </div>
+        <div class="verdict" id="verdict"></div>
         <div class="feedback" id="feedback"></div>
       </div>
     </div>
@@ -122,16 +125,16 @@ const $=(s,p=document)=>p.querySelector(s), $$=(s,p=document)=>[...p.querySelect
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 const API=location.origin;
 let customer=null, cardId=null, lastSeq=0, busy=false, knownCards={}, animQueue=Promise.resolve(), mandateId=null, logCount=0, contractState='none yet', history=[], histOn=-1;
-const LABELS={card_state:'Card state',card_online:'Online use',card_international:'International use',issuer_limit:'Issuer limit',amount:'Order total',period:'Period budget',split_order:'Split order',forbidden_category:'Forbidden items',basket_purpose:'Basket purpose',requested_item:'Product match',item_attribute:'Size & fit',item_sizing:'Sizing advice',return_terms:'Return terms',addons:'No add-ons',subscription_term:'Subscription term',deliver_by:'Delivery date',fulfillment:'Fulfilment',retailer_type:'Retailer type',seller_familiarity:'Known seller',price_sanity:'Price sanity',merchant_trust:'Merchant trust',injection:'Hidden instructions',duplicate:'Duplicate order',session_integrity:'Session integrity'};
-const ORDER=['requested_item','item_attribute','item_sizing','amount','period','deliver_by','return_terms','addons','merchant_trust','seller_familiarity','price_sanity','injection','duplicate','split_order','session_integrity','retailer_type','basket_purpose','forbidden_category','subscription_term','issuer_limit','card_state'];
+const LABELS={card_state:'Card state',card_online:'Online use',card_international:'International use',issuer_limit:'Issuer limit',amount:'Order total',period:'Period budget',split_order:'Split order',forbidden_category:'Forbidden items',basket_purpose:'Basket purpose',requested_item:'Product match',item_attribute:'Size & fit',item_sizing:'Sizing advice',return_terms:'Return terms',addons:'No add-ons',subscription_term:'Subscription term',deliver_by:'Delivery date',fulfillment:'Fulfilment',retailer_type:'Retailer type',seller_familiarity:'Known seller',price_sanity:'Price sanity',merchant_trust:'Merchant trust',injection:'Hidden instructions',hidden_fee:'Hidden charge',duplicate:'Duplicate order',session_integrity:'Session integrity'};
+const ORDER=['requested_item','item_attribute','item_sizing','amount','period','deliver_by','return_terms','addons','hidden_fee','merchant_trust','seller_familiarity','price_sanity','injection','duplicate','split_order','session_integrity','retailer_type','basket_purpose','forbidden_category','subscription_term','issuer_limit','card_state'];
 
 /* helpers */
 function enqueue(fn){animQueue=animQueue.then(fn).catch(err=>{console.error('[leash] animation step failed',err)})}
-function setTop(t,s){$('#title').textContent=t;if(s!==undefined)$('#subtitle').textContent=s}
+function setTop(t,s){$('#verdict').textContent=(s&&s!==t)?s:''}
 function esc(s){return String(s??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
 function md(text){return text.split('\n').map(l=>{if(l.startsWith('# '))return '<h1>'+esc(l.slice(2))+'</h1>';if(l.startsWith('## '))return '<h2>'+esc(l.slice(3))+'</h2>';if(l.startsWith('> '))return '<blockquote>'+esc(l.slice(2))+'</blockquote>';if(l.startsWith('- '))return '<li>'+esc(l.slice(2)).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')+'</li>';return l.trim()?'<p>'+esc(l).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')+'</p>':''}).join('').replace(/(<li>[\s\S]*?<\/li>)+/g,m=>'<ul>'+m+'</ul>')}
 function setContract(html,state){$('#contract').innerHTML=html;contractState=state;updateMeta()}
-function updateMeta(){const on=$('.tabs button.on').dataset.tab;$('#tab-meta').textContent=on==='log'?logCount+' events':contractState}
+let budgetText='';function updateMeta(){const on=$('.tabs button.on').dataset.tab;$('#tab-meta').textContent=on==='log'?logCount+' events':contractState+(budgetText?' · '+budgetText:'')}
 function log(kind,text){const box=$('#log');const d=document.createElement('div');d.innerHTML='<span class="t">'+new Date().toLocaleTimeString([],{hour12:false})+'</span><span class="k">'+esc(kind)+'</span>'+esc(text);box.prepend(d);while(box.children.length>80)box.lastChild.remove();logCount++;updateMeta()}
 function addMsg(role,text){const m=document.createElement('div');m.className='msg '+role;m.textContent=text;$('#messages').appendChild(m);scroll();return m}
 function addTools(names){if(!names.length)return;const t=document.createElement('div');t.className='tools';t.innerHTML=names.map(n=>'<span>→ '+esc(n)+'</span>').join('');$('#messages').appendChild(t);scroll()}
@@ -139,16 +142,21 @@ function scroll(){const m=$('#messages');m.scrollTop=m.scrollHeight}
 $$('.tabs button').forEach(b=>b.onclick=()=>{$$('.tabs button').forEach(x=>x.classList.toggle('on',x===b));$('#contract').hidden=b.dataset.tab!=='contract';$('#log').hidden=b.dataset.tab!=='log';updateMeta()});
 
 /* chat */
+const outbox=[];
 async function send(text,card){
-  if(!text||busy)return;busy=true;$('#send').disabled=true;
+  if(!text)return;
+  if(busy){outbox.push([text,card]);return}   // the agent is mid-turn: queue, never drop
+  busy=true;$('#send').disabled=true;
   if(!card)addMsg('user',text);
   const typing=document.createElement('div');typing.className='typing';typing.innerHTML='<i></i><i></i><i></i>';$('#messages').appendChild(typing);scroll();
+  const post=()=>fetch(API+'/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customer_id:customer,message:text,card_id:card||null})});
   try{
-    const r=await fetch(API+'/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customer_id:customer,message:text,card_id:card||null})});
+    let r;try{r=await post()}catch(e){await wait(2500);r=await post()}   // server restarting? one retry
     const j=await r.json();typing.remove();
     if(!r.ok)addMsg('system','error: '+(j.detail||r.status));else{addTools(j.tool_calls.map(t=>t.name));addMsg('assistant',j.reply)}
   }catch(e){typing.remove();addMsg('system','network error: '+e)}
-  busy=false;$('#send').disabled=false;await refreshCards()
+  busy=false;$('#send').disabled=false;await refreshCards();
+  if(outbox.length){const [t,cid]=outbox.shift();send(t,cid)}
 }
 $('#send').onclick=()=>{const t=$('#input').value.trim();$('#input').value='';send(t)};
 $('#input').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('#send').click()}});
@@ -157,29 +165,45 @@ $$('#suggest button').forEach(b=>b.onclick=()=>{$('#input').value=b.dataset.say;
 /* cards: the trusted channel */
 async function refreshCards(){
   const r=await fetch(API+'/cards?customer_id='+customer+'&pending_only=false');if(!r.ok)return;const cards=await r.json();
+  // questions of one draft are shown one at a time: "Question 2 of 3"
+  const byDraft={};for(const c of cards)if(c.kind==='question'){const k=c.ref?.draft_id||'?';(byDraft[k]=byDraft[k]||[]).push(c)}
+  let shownPending=false;
   for(const c of cards){
     let el=knownCards[c.id];
+    if(c.kind==='question'){
+      const group=byDraft[c.ref?.draft_id||'?'],idx=group.indexOf(c),total=group.length;
+      if(c.status==='pending'){if(shownPending)continue;shownPending=true;c._counter='Question '+(idx+1)+' of '+total;c._last=idx===total-1}
+    }
+    if(c.status==='dismissed'){if(el){el.remove();knownCards[c.id]=null}continue}
     if(!el){el=renderCard(c);knownCards[c.id]=el;$('#messages').appendChild(el);scroll()}
-    if(c.status!=='pending'&&!el.classList.contains('answered')){el.classList.add('answered');$('.actions',el)?.remove();const t=document.createElement('div');t.className='answered-tag';t.textContent='✓ '+(c.answer||'answered');el.appendChild(t)}
+    if(c.kind==='info')continue;
+    if(c.status!=='pending'&&!el.classList.contains('answered')){el.classList.add('answered');$('.actions',el)?.remove();if(c.kind==='question'){el.classList.add('compact');$('.body',el)?.remove()}const t=document.createElement('div');t.className='answered-tag';t.textContent='✓ '+(c.answer||'answered');el.appendChild(t)}
   }
 }
 function renderCard(c){
   const el=document.createElement('div');el.className='card '+c.kind;
-  const kicker={question:'Question from your wallet control',confirm_mandate:'Confirm your contract',step_up:'Approval needed',info:'Notice'}[c.kind]||c.kind;
-  let body=c.body||'';if(c.kind==='confirm_mandate')body=body.split('\n').filter(l=>l.startsWith('- ')).map(l=>l.replace(/\*\*/g,'')).join('\n');
+  const kicker={question:c._counter||'Question from your wallet control',confirm_mandate:'Confirm your contract',step_up:'Approval needed',info:(c.ref?.kind==='receipt'?'Order confirmed':'Notice')}[c.kind]||c.kind;if(c.ref?.kind==='receipt')el.classList.add('receipt');
+  let body=c.body||'';if(c.kind==='confirm_mandate'){const cut=body.indexOf('## Assumptions');const part=cut>0?body.slice(0,cut):body;body=part.split('\n').filter(l=>l.startsWith('- ')).map(l=>l.replace(/\*\*/g,'')).join('\n')}
   el.innerHTML='<div class="kicker">'+esc(kicker)+'</div><h4>'+esc(c.title)+'</h4><div class="body">'+esc(body)+'</div>';
-  if(c.kind==='step_up'&&c.ref?.recommended_action){const n=document.createElement('div');n.className='body';n.style.marginTop='6px';n.textContent='Proposal: one-time virtual card capped at CHF '+c.ref.recommended_action.cap_chf.toFixed(2)+', this seller only, expires in '+c.ref.recommended_action.expires_in_hours+' h.';el.appendChild(n)}
+  if(c.kind==='info'){const x=document.createElement('button');x.className='dismiss';x.title='Dismiss';x.textContent='×';x.onclick=async ev=>{ev.stopPropagation();el.remove();knownCards[c.id]=null;await fetch(API+'/cards/'+c.id+'/dismiss?customer_id='+customer,{method:'POST'})};el.appendChild(x);
+    if(c.ref?.kind==='receipt'){el.classList.add('collapsed');el.onclick=()=>el.classList.toggle('collapsed')}return el}
+  if(c.kind==='step_up'&&(c.ref?.advice||[]).length){const w=document.createElement('div');w.className='body warn';w.style.marginTop='6px';w.textContent='⚠ '+c.ref.advice[0];el.appendChild(w)}
+  if(c.kind==='step_up'&&c.ref?.alternative){const a=c.ref.alternative;const n=document.createElement('div');n.className='body';n.style.marginTop='6px';n.textContent='Alternative: '+a.name+' from '+a.seller+' ('+a.kind+'), CHF '+a.price_chf.toFixed(2)+', delivered by '+a.delivery_by+(a.returns_days?', '+a.returns_days+'-day returns':'')+'.';el.appendChild(n)}
+  if(c.kind==='step_up'&&c.ref?.recommended_action){const n=document.createElement('div');n.className='body';n.style.marginTop='6px';n.textContent='Or: one-time virtual card capped at CHF '+c.ref.recommended_action.cap_chf.toFixed(2)+', this seller only, expires in '+c.ref.recommended_action.expires_in_hours+' h — the item stays at your own risk.';el.appendChild(n)}
   if(c.status!=='pending')return el;
   const act=document.createElement('div');act.className='actions';
-  if(c.kind==='question'){const inp=document.createElement('input');inp.placeholder='Your answer…';const b=document.createElement('button');b.textContent='Answer';b.onclick=()=>answer(c,inp.value.trim());inp.onkeydown=e=>{if(e.key==='Enter')b.click()};act.append(inp,b)}
-  else for(const o of (c.options||[])){const b=document.createElement('button');b.textContent={approve:'Approve',decline:'Decline',confirm:'Confirm contract',reject:'Reject',approve_one_time_card:'Approve with one-time card'+(c.ref?.recommended_action?' · CHF '+c.ref.recommended_action.cap_chf.toFixed(2):'')}[o]||o;if(o==='decline'||o==='reject')b.className='secondary';if(o==='approve_one_time_card')b.className='warn';b.onclick=()=>answer(c,o);act.appendChild(b)}
+  if(c.kind==='question'){const inp=document.createElement('input');inp.placeholder='Your answer…';inp.autofocus=true;const b=document.createElement('button');b.textContent=c._last?'Answer':'Next';b.onclick=()=>answer(c,inp.value.trim());inp.onkeydown=e=>{if(e.key==='Enter')b.click()};act.append(inp,b)}
+  else for(const o of (c.options||[])){const b=document.createElement('button');b.textContent={approve:'Approve',decline:'Decline',confirm:'Confirm contract',reject:'Reject',approve_one_time_card:'One-time card'+(c.ref?.recommended_action?' · CHF '+c.ref.recommended_action.cap_chf.toFixed(2):''),buy_alternative:'Buy from '+(c.ref?.alternative?c.ref.alternative.seller+' · CHF '+c.ref.alternative.price_chf.toFixed(2):'alternative')}[o]||o;if(o==='decline'||o==='reject')b.className='secondary';if(o==='approve_one_time_card')b.className='warn';b.onclick=()=>answer(c,o);act.appendChild(b)}
   el.appendChild(act);return el
 }
 async function answer(c,value){
   if(!value)return;const r=await fetch(API+'/cards/'+c.id+'/answer?customer_id='+customer,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({answer:value})});
   const j=await r.json();await refreshCards();
+  if(!r.ok){addMsg('system','could not record the answer: '+(j.detail||r.status));return}
+  if(c.kind==='question'&&!c._last){return}   // next question card is already showing; talk to the agent after the last one
+  if(c.kind==='question'&&c._last){send('I answered all your questions. Please continue.',c.id);return}
   if(c.kind==='confirm_mandate'&&j.mandate)mandateId=j.mandate.mandate_id;
-  const human={approve:'I approve this purchase.',approve_one_time_card:'I approve it with a one-time virtual card.',decline:'I decline this purchase.',confirm:'I confirmed the contract. Go ahead and shop.',reject:'I rejected the contract.'}[value]||('I answered the card "'+c.title+'": '+value);
+  const human={approve:'I approve this purchase.',approve_one_time_card:'I approve it with a one-time virtual card.',decline:'I decline this purchase.',confirm:'I confirmed the contract. Go ahead and shop.',reject:'I rejected the contract.',buy_alternative:(j.follow_up||'Please buy it from the alternative seller instead.')}[value]||('I answered the card "'+c.title+'": '+value);
   addMsg('user',human);send(human+(c.kind==='confirm_mandate'&&j.mandate?' (mandate_id '+j.mandate.mandate_id+')':''),c.id)
 }
 
@@ -193,12 +217,13 @@ function handle(e){
   switch(e.type){
     case 'compile.started':enqueue(()=>compileStart(e));break;
     case 'compile.done':remember({kind:'compile',e});enqueue(()=>compileDone(e));break;
-    case 'contract.updated':setContract(md(e.contract_markdown),'draft · updated: '+e.note);break;
-    case 'mandate.confirmed':mandateId=e.mandate_id;setContract(md(e.contract_markdown),'active · '+e.mandate_id);$('#pill-mandate').textContent='contract active';$('#pill-mandate').className='pill on';setTop('Contract confirmed.','The agent may now shop inside these clauses. Every purchase is checked here.');refreshBudget();break;
-    case 'mandate.revoked':$('#pill-mandate').textContent='revoked';$('#pill-mandate').className='pill off';setTop('Contract revoked.','The agent can no longer spend.');break;
+    case 'contract.updated':setContract(md(e.contract_markdown),'draft · updated: '+e.note);enqueue(()=>{$('#core-detail').textContent=e.note||'';pulse()});break;
+    case 'mandate.confirmed':mandateId=e.mandate_id;setContract(md(e.contract_markdown),'active · '+e.mandate_id);$('#core-title').textContent='Contract active';$('#core-detail').textContent='The agent may shop inside these clauses';$('#core-icon').textContent='✓';$('#core-result').textContent='confirmed';$$('.thought.q').forEach(t=>t.classList.add('done'));pulse();refreshBudget();break;
+    case 'mandate.revoked':setContract($('#contract').innerHTML,'revoked · '+e.mandate_id);$('#core-title').textContent='Revoked';$('#core-detail').textContent='The agent can no longer spend';$('#core-icon').textContent='×';break;
     case 'decision.started':enqueue(()=>arrive(e));break;
     case 'decision':remember({kind:'decision',e});enqueue(()=>evaluate(e));break;
-    case 'card.answered':refreshCards();refreshBudget();break;
+    case 'card.answered':if(e.card&&e.card.kind==='question')enqueue(()=>answerThought(e.card));refreshCards();refreshBudget();break;
+    case 'order.placed':refreshCards();refreshBudget();break;
     case 'session.reset':resetStage();break;
   }
 }
@@ -218,10 +243,22 @@ async function compileStart(e){
   for(const n of $$('.thought',orbit)){n.classList.add('show');await wait(550);n.classList.add('done')}
 }
 async function compileDone(e){
-  $$('.thought').forEach(n=>n.classList.add('done'));setContract(md(e.contract_markdown),'draft · '+e.questions.length+' question'+(e.questions.length===1?'':'s')+' · by '+e.compiled_by);
-  $('#core-title').textContent='Contract drafted';$('#core-detail').textContent=e.questions.length?e.questions.length+' question(s) only you can answer':'No questions — ready to confirm';$('#core-icon').textContent='✓';
-  setTop('Contract drafted.',e.questions.length?'Answer the cards in the chat; then confirm.':'Confirm the contract in the chat to activate it.');await wait(700);$('#orbit').innerHTML='';
+  $$('.thought').forEach(n=>n.classList.add('done'));setContract(md(e.contract_markdown),'draft · '+(e.questions||[]).length+' question'+((e.questions||[]).length===1?'':'s')+' · by '+e.compiled_by);
+  const n=(e.questions||[]).length;$('#core-title').textContent='Contract drafted';$('#core-detail').textContent=n?n+' question(s) only you can answer':'No questions — ready to confirm';$('#core-icon').textContent='✓';
+  setTop('Contract drafted.',n?'Answer the cards in the chat; then confirm.':'Confirm the contract in the chat to activate it.');
+  await wait(700);showQuestions(e.questions||[]);
 }
+function showQuestions(qs){
+  const orbit=$('#orbit');orbit.innerHTML='';if(!qs.length)return;$('#core-result').textContent=qs.length+' open';
+  qs.forEach((q,i)=>{const d=document.createElement('div');d.className='thought q';d.dataset.q=q;d.style.setProperty('--a',(i*360/qs.length)+'deg');d.innerHTML='<span class="qt">'+esc(q)+'</span><span class="qa">…</span>';orbit.appendChild(d);setTimeout(()=>d.classList.add('show'),120*i)});
+}
+function answerThought(card){
+  const d=$$('.thought.q').find(t=>t.dataset.q===card.title);if(!d)return;
+  d.querySelector('.qa').textContent='✓ '+card.answer;d.classList.add('done');
+  const left=$$('.thought.q').filter(t=>!t.classList.contains('done')).length;$('#core-result').textContent=left?left+' open':'all answered';
+  $('#core-title').textContent=left?'Building your contract':'Ready to confirm';pulse();
+}
+function pulse(){const c=$('#core');c.classList.remove('pulse');void c.offsetWidth;c.classList.add('pulse')}
 function fmtMoney(p){return (p.currency==='CHF'?'':p.amount.toFixed(2)+' '+p.currency+' ≈ ')+'CHF '+p.total_chf.toFixed(2)}
 async function arrive(e,instant=false){
   resetWheel();radius();const p=e.purchase;const card=$('#txcard');card.classList.remove('arrive');
@@ -274,16 +311,16 @@ async function evaluate(e,instant=false,replay=false){
   if(dec==='approve'){wheel.classList.add('approved');icon.textContent='✓';title.textContent=isPre?'Would approve':'Approved';detail.textContent='Every clause satisfied';result.textContent=isPre?'dry check':'safe to pay';setTop(isPre?'This would be approved.':'Approved.',r.customer_message)}
   else if(dec==='decline'){icon.textContent='×';icon.style.background='var(--rb)';icon.style.color='var(--red)';title.textContent=isPre?'Would decline':'Declined';detail.textContent=problems.length+' clause'+(problems.length===1?'':'s')+' failed';result.textContent=isPre?'dry check':'blocked';setTop(isPre?'This would be declined.':'Declined.',r.customer_message)}
   else{icon.textContent='?';icon.style.background='var(--ab)';icon.style.color='var(--amber)';title.textContent=isPre?'Would ask you':'Asking you';detail.textContent=problems.length?'Needs your answer':'Uncertain';result.textContent=isPre?'dry check':'paused';setTop(isPre?'This would need your OK.':'Paused for your answer.',r.customer_message)}
-  if(instant||replay)setTop('Earlier: '+$('#title').textContent.toLowerCase(),r.customer_message);
+  if(instant||replay)setTop('Earlier',r.customer_message);
   fb.classList.add('show');if(e.card&&!instant&&!replay)refreshCards();refreshBudget();await W(500)
 }
-function resetWheel(){$('#criteria').innerHTML='';$('#orbit').innerHTML='';$('#feedback').classList.remove('show');$('#feedback').innerHTML='';const w=$('#wheel');w.classList.remove('approved');w.style.removeProperty('--spin');$('#core-icon').textContent='···';$('#core-icon').removeAttribute('style');$('#core-result').textContent='0 checks'}
-function resetStage(){history=[];histOn=-1;$('#core-hist').classList.remove('show');$('#history').classList.remove('open');renderHistory();resetWheel();$('#txcard').classList.remove('arrive');setContract('<span class="empty">The engine compiles your words into clauses it can enforce. They appear here for you to confirm.</span>','none yet');$('#pill-mandate').textContent='no contract';$('#pill-mandate').className='pill off';$('#pill-budget').textContent='—';$('#pill-budget').className='pill off';$('#core-title').textContent='Idle';$('#core-detail').textContent='No purchase proposed yet';setTop('Waiting for a task.','Tell the agent what you want. It cannot spend until you confirm a contract.')}
-async function refreshBudget(){if(!mandateId)return;try{const r=await fetch(API+'/mandates/'+mandateId+'/budget?customer_id='+customer);if(!r.ok)return;const b=await r.json();const parts=[];if(b.per_order_cap_chf)parts.push('≤ CHF '+b.per_order_cap_chf+' / order');if(b.period)parts.push('CHF '+b.period.remaining_chf.toFixed(0)+' left of '+b.period.cap_chf+' / '+b.period.days+' d');$('#pill-budget').textContent=parts.join(' · ')||'no caps';$('#pill-budget').className='pill on'}catch(e){}}
+function resetWheel(){$('#verdict').textContent='';$('#criteria').innerHTML='';$('#orbit').innerHTML='';$('#feedback').classList.remove('show');$('#feedback').innerHTML='';const w=$('#wheel');w.classList.remove('approved');w.style.removeProperty('--spin');$('#core-icon').textContent='···';$('#core-icon').removeAttribute('style');$('#core-result').textContent='0 checks'}
+function resetStage(){history=[];histOn=-1;budgetText='';$('#core-hist').classList.remove('show');$('#history').classList.remove('open');renderHistory();resetWheel();$('#txcard').classList.remove('arrive');setContract('<span class="empty">The engine compiles your words into clauses it can enforce. They appear here for you to confirm.</span>','none yet');$('#core-title').textContent='Idle';$('#core-detail').textContent='Tell the agent what you want. Nothing is spent until you confirm a contract.';$('#verdict').textContent=''}
+async function refreshBudget(){if(!mandateId)return;try{const r=await fetch(API+'/mandates/'+mandateId+'/budget?customer_id='+customer);if(!r.ok)return;const b=await r.json();const parts=[];if(b.per_order_cap_chf)parts.push('≤ CHF '+b.per_order_cap_chf+' / order');if(b.period)parts.push('CHF '+b.period.remaining_chf.toFixed(0)+' left of '+b.period.cap_chf+' / '+b.period.days+' d');budgetText=parts.join(' · ');updateMeta()}catch(e){}}
 
 /* boot */
 async function boot(){
-  const h=await (await fetch(API+'/health')).json();$('#pill-engine').textContent='engine '+h.engine_version+(h.openai?' · openai':' · rules only')+(h.sandbox?' · sandbox':'');$('#pill-engine').className='pill '+(h.openai?'on':'off');
+  const h=await (await fetch(API+'/health')).json();log('engine',h.engine_version+(h.openai?' · openai':' · rules only')+(h.sandbox?' · sandbox':''));
   const cs=await (await fetch(API+'/customers')).json();const sel=$('#customer');cs.forEach(c=>{const o=document.createElement('option');o.value=c.customer_id;o.textContent=c.name+' · '+c.customer_id;o.dataset.card=c.card_id||'';o.dataset.prefs=c.preferences;o.dataset.familiar=JSON.stringify(c.familiar||[]);sel.appendChild(o)});
   sel.value=new URLSearchParams(location.search).get('customer')||'CU0006';selectCustomer();sel.onchange=selectCustomer;
   $('#reset').onclick=async()=>{await fetch(API+'/chat/reset?customer_id='+customer+'&wipe_state=true',{method:'POST'});knownCards={};mandateId=null;$$('#messages > *').slice(1).forEach(n=>n.remove());resetStage();addMsg('system','session reset')};

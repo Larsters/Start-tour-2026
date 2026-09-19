@@ -200,6 +200,7 @@ class Receipt(BaseModel):
     evidence: list[ClauseResult]
     advice: list[str] = Field(default_factory=list)
     recommended_action: RecommendedAction | None = None
+    alternative: dict[str, Any] | None = None       # a compliant listing for the same item (demo shop)
     engine_version: str
     degraded: bool = False
     elapsed_ms: int = 0

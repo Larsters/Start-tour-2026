@@ -33,6 +33,8 @@ def client() -> VisecaClient:
 def draft_mandate(customer_id: str, instruction: str, card_id: str | None = None, prefer_llm: bool = True) -> dict[str, Any]:
     events.publish(customer_id, "compile.started", instruction=instruction)
     m = compile_instruction(instruction, prefer_llm=prefer_llm and bool(config.OPENAI_API_KEYS))
+    if not card_id:   # the customer's card, from the issuer's data
+        card_id = next((c for c, b in ref().baselines.items() if b.customer_id == customer_id), None)
     m.customer_id, m.card_id = customer_id, card_id
     key = f"draft_{abs(hash(instruction)) % 10**8}"
     m.draft_id = key
@@ -210,16 +212,12 @@ def precheck(customer_id: str, mandate_id: str, cart: dict[str, Any], advise: bo
     real_ledger = Ledger(customer_id)
     tmp = tempfile.mkdtemp(prefix="leash_precheck_")
     try:
-        # copy ledger so period/duplicate context is real, but nothing is written back
+        # a scratch copy of the ledger: period/duplicate context is real, nothing is written back
         scratch = L.Ledger(customer_id, state_dir=__import__("pathlib").Path(tmp))
         if real_ledger.path.exists():
             shutil.copy(real_ledger.path, scratch.path)
-        orig = L.Ledger.__init__
-        L.Ledger.__init__ = lambda self, cid, state_dir=None: orig(self, cid, __import__("pathlib").Path(tmp))  # type: ignore
-        try:
-            r = decide(ev, allow_model=bool(config.OPENAI_API_KEYS), hints=hints)
-        finally:
-            L.Ledger.__init__ = orig  # type: ignore
+            scratch = L.Ledger(customer_id, state_dir=__import__("pathlib").Path(tmp))
+        r = decide(ev, allow_model=bool(config.OPENAI_API_KEY), hints=hints, ledger=scratch)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     d = r.model_dump(mode="json")
@@ -237,12 +235,27 @@ def _purchase_summary(ev: AuthorizationEvent) -> dict[str, Any]:
             "details": a.items[0].item_details[:160], "scenario_id": a.scenario_id, "source_id": a.source_authorization_id}
 
 
+def _alternative_for(cart: dict[str, Any]) -> dict[str, Any] | None:
+    """Same item from the official store or a shop the customer knows (demo mock shop)."""
+    from .mockshop import alternatives_for
+    merchant = cart.get("merchant") or {}
+    mid = merchant.get("merchant_id") if isinstance(merchant, dict) else None
+    return alternatives_for(cart, mid)
+
+
 def propose_purchase(customer_id: str, mandate_id: str, cart: dict[str, Any], advise: bool = True) -> dict[str, Any]:
     ev = cart_to_event(customer_id, mandate_id, cart)
     hints = _hints(customer_id, mandate_id, cart, advise)
     events.publish(customer_id, "decision.started", mode="propose", purchase=_purchase_summary(ev))
-    r = decide(ev, allow_model=bool(config.OPENAI_API_KEYS), hints=hints)
+    alt = None
+    try:
+        alt = _alternative_for(cart)
+    except Exception as exc:
+        log.warning("alternative lookup failed: %s", exc)
+    r = decide(ev, allow_model=bool(config.OPENAI_API_KEY), hints=hints, alternative=alt)
     card = make_step_up_card(customer_id, ev, r) if r.decision == "step_up" else None
+    if r.decision == "approve":
+        card = order_confirmation(customer_id, ev, "approved by your wallet contract")
     d = r.model_dump(mode="json")
     d["card"] = card
     events.publish(customer_id, "decision", mode="propose", receipt=d, purchase=_purchase_summary(ev), card=card)
@@ -274,6 +287,9 @@ def answer_card(customer_id: str, card_id: str, answer: str, note: str = "") -> 
     events.publish(customer_id, "card.answered", card=card)
     if card["kind"] == "step_up":
         out["resolution"] = resolve_card(client(), customer_id, card, answer, note)
+        if answer == "buy_alternative" and card["ref"].get("alternative"):
+            alt = card["ref"]["alternative"]
+            out["follow_up"] = f"Please buy the {alt['name']} from {alt['seller']} instead (sku {alt['sku']}, size {alt.get('size') or 'as before'})."
     elif card["kind"] == "confirm_mandate" and answer == "confirm":
         out["mandate"] = confirm_mandate(customer_id, card["ref"]["draft_id"])
     elif card["kind"] == "question":
@@ -315,8 +331,7 @@ def dry_run(customer_id: str, draft_id: str, *, limit: int = 60) -> dict[str, An
             and h["channel"] in ("ecommerce", "recurring", "mobile_wallet")][-limit:]
     tmp = Path(tempfile.mkdtemp(prefix="leash_dryrun_"))
     scratch_mandate_id = f"TM_DRYRUN_{draft_id}"
-    orig = L.Ledger.__init__
-    L.Ledger.__init__ = lambda self, cid, state_dir=None: orig(self, cid, tmp)  # type: ignore
+    scratch = L.Ledger(customer_id, state_dir=tmp)
     counts = {"approve": 0, "step_up": 0, "decline": 0}
     samples: list[dict[str, Any]] = []
     try:
@@ -343,13 +358,12 @@ def dry_run(customer_id: str, draft_id: str, *, limit: int = 60) -> dict[str, An
                             "hard_rules": [x.model_dump(mode="json", exclude_none=True) for x in m.hard_rules], "uncertainty_policy": m.uncertainty_policy, "profile_id": "PROFILE_DRY"},
                 "context": {"approved_spend_in_period_chf": None, "recent_authorizations": []},
                 "runtime": {"received_at": now.isoformat(), "history_window_minutes": 10, "context_basis": "run_decisions_and_scenario_timestamps"}})
-            rc = _decide(ev, mandate=m, allow_model=False, now=now)
+            rc = _decide(ev, mandate=m, allow_model=False, now=now, ledger=scratch)
             counts[rc.decision] += 1
             if rc.decision != "approve" and len(samples) < 8:
                 samples.append({"when": h["timestamp"][:10], "merchant": h["merchant_name"], "what": h["description"], "chf": float(h["billing_amount_chf"]),
                                 "decision": rc.decision, "why": rc.reason_codes})
     finally:
-        L.Ledger.__init__ = orig  # type: ignore
         shutil.rmtree(tmp, ignore_errors=True)
     n = sum(counts.values())
     summary = (f"Of your last {n} online purchases on this card, the money and merchant rules of this contract would have approved {counts['approve']}, "
@@ -365,9 +379,13 @@ def current_state(customer_id: str) -> dict[str, Any]:
     drafts = sorted(mdir.glob("draft_*.md"), key=lambda p: p.stat().st_mtime)
     actives = sorted((p for p in mdir.glob("*.md") if not p.name.startswith("draft_")), key=lambda p: p.stat().st_mtime)
     active_id = actives[-1].stem if actives else None
-    pending = Cards(customer_id).pending()
+    allc = Cards(customer_id).list()
+    pending = [c for c in allc if c["status"] == "pending"]
+    answered = [c for c in allc if c["status"] == "answered" and c["kind"] == "step_up"][-3:]
     out: dict[str, Any] = {"draft_id": drafts[-1].stem if drafts else None, "mandate_id": active_id,
-                           "pending_cards": [{"kind": c["kind"], "title": c["title"]} for c in pending]}
+                           "pending_cards": [{"kind": c["kind"], "title": c["title"]} for c in pending],
+                           "recent_step_up_answers": [{"title": c["title"], "answer": c["answer"], "alternative": c["ref"].get("alternative"),
+                                                       "authorization_id": c["ref"].get("authorization_id")} for c in answered]}
     if active_id:
         m = state.load_mandate(active_id)
         if m:
@@ -375,3 +393,17 @@ def current_state(customer_id: str) -> dict[str, Any]:
                                        "requested_items": [ri.model_dump() for ri in ([m.intent.requested_item] if m.intent.requested_item else []) + list(m.intent.requested_items)],
                                        "deliver_by": str(m.intent.deliver_by) if m.intent.deliver_by else None, "seller_familiarity_min": m.intent.seller_familiarity_min}
     return out
+
+
+def order_confirmation(customer_id: str, ev: AuthorizationEvent, how: str) -> dict[str, Any]:
+    """Written confirmation the customer keeps: what was charged, where, when it arrives."""
+    a = ev.authorization
+    items = ", ".join(f"{it.quantity}× {it.item_name}" for it in a.items)
+    body = (f"Charged CHF {a.billing_amount_chf:.2f}" + (f" ({a.amount:.2f} {a.currency})" if a.currency != "CHF" else "") +
+            f" to card {a.card_id} · {a.merchant.merchant_name} ({a.merchant.merchant_country})\n"
+            f"Items: {items}\nDelivery by: {a.delivery_by or 'not stated'} · Returns: {a.order_returnable}\n"
+            f"Authorization {a.authorization_id} · {how}")
+    card = Cards(customer_id).create("info", f"Order placed · CHF {a.billing_amount_chf:.2f} at {a.merchant.merchant_name}", body, options=[],
+                                     ref={"kind": "receipt", "authorization_id": a.authorization_id, "mandate_id": a.mandate_id, "amount_chf": a.billing_amount_chf})
+    events.publish(customer_id, "order.placed", card=card)
+    return card

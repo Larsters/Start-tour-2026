@@ -201,10 +201,24 @@ def return_terms(a: Authorization, facts: dict[int, ExtractedFacts], i: IntentSp
     return out
 
 
+def hidden_fee(a: Authorization, facts: dict[int, ExtractedFacts]) -> ClauseResult | None:
+    """A one-off product whose merchant text enrols the buyer in a recurring
+    charge. Not a separate cart line, so the customer would never see it."""
+    for it in a.items:
+        f = facts[it.line_no]
+        if it.item_category in ("subscriptions", "membership") or (f.is_addon_service and len(a.items) > 1):
+            continue
+        if f.recurring_billing or f.minimum_term_months:
+            term = f" (minimum term {f.minimum_term_months} months)" if f.minimum_term_months else ""
+            return _fail("hidden_fee", "step_up", f"'{it.item_name}' comes with a recurring charge buried in the product text{term}; you did not ask for a subscription",
+                         value=f.minimum_term_months or True, extra={"line_no": it.line_no}, counterfactual="would pass without the recurring charge")
+    return None
+
+
 def addons(a: Authorization, facts: dict[int, ExtractedFacts], i: IntentSpec) -> ClauseResult | None:
     if not (i.no_addons or _requested(i)):
         return None
-    extras = [it for it in a.items if facts[it.line_no].is_addon_service or facts[it.line_no].recurring_billing
+    extras = [it for it in a.items if (facts[it.line_no].is_addon_service and len(a.items) > 1)
               or it.item_category in ("subscriptions", "membership")]
     want_qty = sum(ri.quantity for ri in _requested(i)) or 1
     mains = [it for it in a.items if it not in extras]

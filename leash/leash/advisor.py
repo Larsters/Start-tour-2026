@@ -104,7 +104,15 @@ def market_price(state: CustomerState, item_desc: str) -> dict[str, Any] | None:
     return {"item": item_desc, "low": float(d["low"]), "high": float(d["high"]), "sources": d.get("sources"), "confidence": d.get("confidence")}
 
 
+VERIFIED_SELLERS = ["official store", "adidas.ch", "adidas.com", "nike.com", "nike.ch", "puma.com", "asics.com", "newbalance", "on.com", "on-running",
+                    "ochsner sport", "ochsnersport", "galaxus", "digitec", "zalando", "manor", "sportxx", "intersport", "decathlon", "brack.ch", "microspot", "coop.ch", "migros"]
+
+
 def merchant_reputation(state: CustomerState, merchant_name: str, country: str | None = None) -> dict[str, Any] | None:
+    low = merchant_name.lower()
+    if any(k in low for k in VERIFIED_SELLERS):
+        return {"name": merchant_name, "verdict": "reputable", "score_adj": 0.4, "confidence": "high",
+                "summary": f"{merchant_name} is an official brand store or an established retailer.", "sources": ["issuer allow-list"]}
     q = (f"Is the online seller '{merchant_name}'{f' ({country})' if country else ''} a reputable, established retailer, or are there "
          "scam/counterfeit/non-delivery reports? Answer 'suspicious' ONLY if pages clearly about THIS seller report fraud, counterfeits or "
          "non-delivery; 'reputable' only if pages clearly about this seller show an established business; otherwise 'unknown'. "

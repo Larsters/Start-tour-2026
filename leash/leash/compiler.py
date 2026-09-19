@@ -134,11 +134,11 @@ _LLM_SYSTEM = """You compile a cardholder's plain-language spending instruction 
 - allowed_item_categories vocabulary: groceries, clothing, sporting_goods, electronics, books, pet_care, household, health, subscriptions, membership, cosmetics, gift_card, transport, dining, food_delivery, fuel, travel, hotel, entertainment, software, sustainable_goods, kids_family, home_improvement, photography. Leave empty when requested_items are given.
 - requested_items: one entry per specific thing the customer names, e.g. [{type: 'road-running shoes', attributes: {size: '43'}}, {type: 'football jersey', attributes: {brand: 'adidas'}}]. `type` is a short natural phrase KEEPING qualifiers (road-running, 27-inch). `attributes` keys are ONLY size, brand, color; omit unknown ones (ask instead). Set no_addons true when items are named.
 - one_time: true ONLY if the customer says once/one-time/only one; otherwise false.
-- retailer_categories: merchant types the customer restricts to (same vocabulary), e.g. 'specialist sports retailer' -> ['sporting_goods'].
+- retailer_categories: ONLY when the customer explicitly restricts the KIND of shop ("only from a specialist sports retailer", "from a pharmacy"). Never infer it from the item; a jersey may be sold by sports shops, clothing shops or the brand itself. Otherwise [].
 - seller_familiarity_min: 3 for 'regularly', 1 for 'bought from before / used before'; null if not mentioned.
 - session_integrity: true if the customer wants pauses when the session looks like someone else.
 - deliver_by: ISO date only if stated or exactly derivable; 'birthday in a week' -> null + open question for the date.
-- open_questions: AT MOST 3, only facts that block a decision and that the customer alone can answer (size, deadline date, brand yes/no). Never ask about color, style, model preferences.
+- open_questions: AT MOST 3, only facts that block a decision and that the customer alone can answer. Ask the SIZE of every sized item (shoes, clothing) that lacks one, and the exact delivery date when an occasion is mentioned. Never ask about brand when one was named, colour, style, model or team preferences.
 - assumptions: interpretations you made, at most 4, one sentence each.
 - uncertainty_policy: 'ask' if they say ask me; 'decline' if they say decline when unsure; else 'ask'."""
 
@@ -162,6 +162,8 @@ def compile_llm(instruction: str, today: date | None = None) -> CompiledMandate 
         ), timeout=30, max_retries=1)
         data = json.loads(resp.choices[0].message.content or "{}")
         intent = IntentSpec.model_validate(data["intent"])
+        if not re.search(r"(only|specialist|specialised|specialized|exclusively)\b.{0,50}\b(retailer|shop|store|seller|merchant|pharmacy|supermarket)", instruction, re.I):
+            intent.retailer_categories = []          # the customer did not restrict the kind of shop
         banned = re.compile(r"colou?r|style|design|model preference|preferred brand|preferred model", re.I)
         data["open_questions"] = [q for q in data["open_questions"] if not banned.search(q)][:3]
         base = compile_rules(instruction)          # rules produce the API hard_rules; LLM refines intent
@@ -225,6 +227,9 @@ def apply_answer(m: CompiledMandate, question: str, answer: str, today: date | N
         note = "answer recorded, not applied (no rule matched)"
     m.intent = i
     m.open_questions = [q for q in m.open_questions if q != question]
-    m.assumptions.append(f"Customer answered '{question}' → {a} ({note}).")
+    topic = re.findall(r"size|date|deadline|birthday|deliver|brand|budget|amount|spend|one-time", ql)
+    if topic:
+        m.assumptions = [x for x in m.assumptions if not (x.lower().startswith("customer answered") is False and any(t in x.lower() for t in topic) and ("unknown" in x.lower() or "not specified" in x.lower() or "no particular" in x.lower() or "approximately" in x.lower() or "no explicit" in x.lower()))]
+    m.assumptions.append(f"You told me: {a} ({note}).")
     m.guidance = [f"intent:{json.dumps(i.model_dump(mode='json'))}"]
     return m, note
