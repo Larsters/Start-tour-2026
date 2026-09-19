@@ -32,7 +32,7 @@ def client() -> VisecaClient:
 # ------------------------------------------------------------------ mandates
 def draft_mandate(customer_id: str, instruction: str, card_id: str | None = None, prefer_llm: bool = True) -> dict[str, Any]:
     events.publish(customer_id, "compile.started", instruction=instruction)
-    m = compile_instruction(instruction, prefer_llm=prefer_llm and bool(config.OPENAI_API_KEY))
+    m = compile_instruction(instruction, prefer_llm=prefer_llm and bool(config.OPENAI_API_KEYS))
     m.customer_id, m.card_id = customer_id, card_id
     key = f"draft_{abs(hash(instruction)) % 10**8}"
     m.draft_id = key
@@ -41,7 +41,7 @@ def draft_mandate(customer_id: str, instruction: str, card_id: str | None = None
     cards = Cards(customer_id)
     qcards = [cards.create("question", q, "Only you can answer this.", options=["answer"], ref={"draft_id": key})
               for q in m.open_questions]
-    events.publish(customer_id, "compile.done", draft_id=key, contract_markdown=render_contract(m), intent=m.intent.model_dump(mode="json"),
+    events.publish(customer_id, "compile.done", draft_id=key, instruction=instruction, contract_markdown=render_contract(m), intent=m.intent.model_dump(mode="json"),
                    questions=[q["title"] for q in qcards], assumptions=m.assumptions, compiled_by=m.compiled_by)
     return {"draft_id": key, "contract_markdown": render_contract(m), "mandate": m.model_dump(mode="json"),
             "questions": qcards, "compiled_by": m.compiled_by}
@@ -193,7 +193,7 @@ def cart_to_event(customer_id: str, mandate_id: str, cart: dict[str, Any], *, au
 
 
 def _hints(customer_id: str, mandate_id: str, cart: dict[str, Any], advise: bool):
-    if not advise or not config.OPENAI_API_KEY:
+    if not advise or not config.OPENAI_API_KEYS:
         return None
     from .advisor import hints_for_cart
     m = CustomerState(customer_id).find_mandate(mandate_id)
@@ -217,7 +217,7 @@ def precheck(customer_id: str, mandate_id: str, cart: dict[str, Any], advise: bo
         orig = L.Ledger.__init__
         L.Ledger.__init__ = lambda self, cid, state_dir=None: orig(self, cid, __import__("pathlib").Path(tmp))  # type: ignore
         try:
-            r = decide(ev, allow_model=bool(config.OPENAI_API_KEY), hints=hints)
+            r = decide(ev, allow_model=bool(config.OPENAI_API_KEYS), hints=hints)
         finally:
             L.Ledger.__init__ = orig  # type: ignore
     finally:
@@ -241,7 +241,7 @@ def propose_purchase(customer_id: str, mandate_id: str, cart: dict[str, Any], ad
     ev = cart_to_event(customer_id, mandate_id, cart)
     hints = _hints(customer_id, mandate_id, cart, advise)
     events.publish(customer_id, "decision.started", mode="propose", purchase=_purchase_summary(ev))
-    r = decide(ev, allow_model=bool(config.OPENAI_API_KEY), hints=hints)
+    r = decide(ev, allow_model=bool(config.OPENAI_API_KEYS), hints=hints)
     card = make_step_up_card(customer_id, ev, r) if r.decision == "step_up" else None
     d = r.model_dump(mode="json")
     d["card"] = card
@@ -251,7 +251,7 @@ def propose_purchase(customer_id: str, mandate_id: str, cart: dict[str, Any], ad
 
 def decide_event(event: dict[str, Any], run_id: str | None = None) -> dict[str, Any]:
     ev = AuthorizationEvent.model_validate(event)
-    r = decide(ev, run_id=run_id, allow_model=bool(config.OPENAI_API_KEY))
+    r = decide(ev, run_id=run_id, allow_model=bool(config.OPENAI_API_KEYS))
     if r.decision == "step_up":
         make_step_up_card(ev.mandate.customer_id, ev, r)
     return r.model_dump(mode="json")
@@ -284,7 +284,7 @@ def answer_card(customer_id: str, card_id: str, answer: str, note: str = "") -> 
 
 
 def status() -> dict[str, Any]:
-    return {"engine_version": ENGINE_VERSION, "openai": bool(config.OPENAI_API_KEY), "sandbox": client().configured,
+    return {"engine_version": ENGINE_VERSION, "openai": bool(config.OPENAI_API_KEYS), "openai_keys": len(config.OPENAI_API_KEYS), "sandbox": client().configured,
             "extractor_model": config.EXTRACTOR_MODEL, "compiler_model": config.COMPILER_MODEL, "state_dir": str(config.STATE_DIR)}
 
 

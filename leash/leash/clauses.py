@@ -125,12 +125,26 @@ def _requested(i: IntentSpec) -> list:
     return ([i.requested_item] if i.requested_item else []) + list(i.requested_items)
 
 
+_GENERIC = {"set", "item", "product", "thing", "pair", "one", "kit", "piece", "unit", "gift", "present", "model"}
+
+
 def _match(have: list[str], want: list[str]) -> str:
-    """'exact' | 'substitute' | 'none' for one cart line vs one requested item."""
-    head = want[-1]
-    if not have or (have[-1] != head and head not in have):
+    """'exact' | 'substitute' | 'none' for one cart line vs one requested item.
+    The last token is the head noun unless it is generic ('set', 'item'); the
+    rest are qualifiers. Head present + all qualifiers present → exact; head
+    present but a qualifier missing (road vs trail) → substitute; head absent →
+    substitute only if most qualifiers still match, else none."""
+    if not have or not want:
         return "none"
-    return "substitute" if [t for t in want[:-1] if t not in have] else "exact"
+    head = want[-1]
+    quals = [t for t in want[:-1] if t not in _GENERIC]
+    head_ok = head in have or head in _GENERIC
+    missing = [t for t in quals if t not in have]
+    if head_ok:
+        return "substitute" if missing else "exact"
+    if quals and len(missing) / len(quals) <= 0.5:
+        return "substitute"
+    return "none"
 
 
 def requested_item(a: Authorization, facts: dict[int, ExtractedFacts], i: IntentSpec) -> list[ClauseResult]:
@@ -150,7 +164,7 @@ def requested_item(a: Authorization, facts: dict[int, ExtractedFacts], i: Intent
             out.append(_fail("requested_item", "decline", f"'{it.item_name}' is not the requested {label}", value=it.item_name, limit=label))
             continue
         if kind == "substitute":
-            missing = [t for t in w[:-1] if t not in have]
+            missing = [t for t in w if t not in have and t not in _GENERIC] or [w[-1]]
             out.append(_fail("requested_item", "step_up", f"'{it.item_name}' looks like a substitute for the requested {ri.type} (missing: {', '.join(missing)})",
                              value=it.item_name, limit=ri.type))
             continue
@@ -221,8 +235,10 @@ def price_sanity(a: Authorization, ref: ReferenceData, market: dict | None = Non
         if unit_chf < lo * THRESHOLDS["price_sanity_low_factor"]:
             out.append(_fail("price_sanity", "step_up", f"'{it.item_name}' at CHF {unit_chf:.2f} is far below the usual CHF {lo:.0f}–{hi:.0f} ({src}); could be counterfeit or a bait listing",
                              value=unit_chf, limit=[lo, hi], extra={"source": src}))
+        elif unit_chf > hi * 3:
+            out.append(_fail("price_sanity", "step_up", f"'{it.item_name}' at CHF {unit_chf:.2f} is several times the usual CHF {lo:.0f}–{hi:.0f} ({src})", value=unit_chf, limit=[lo, hi], extra={"source": src}))
         elif unit_chf > hi * 1.5:
-            out.append(_fail("price_sanity", "step_up", f"'{it.item_name}' at CHF {unit_chf:.2f} is far above the usual CHF {lo:.0f}–{hi:.0f}", value=unit_chf, limit=[lo, hi]))
+            out.append(_info("price_sanity", f"'{it.item_name}' at CHF {unit_chf:.2f} is above the usual CHF {lo:.0f}–{hi:.0f} ({src}); worth a look", value=unit_chf, limit=[lo, hi], extra={"source": src}))
         else:
             out.append(_info("price_sanity", f"'{it.item_name}' CHF {unit_chf:.2f} within usual CHF {lo:.0f}–{hi:.0f} (typical {typ:.0f})", value=unit_chf, limit=[lo, hi]))
     return out

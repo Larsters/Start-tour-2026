@@ -9,7 +9,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
-from . import config
+from . import config, llm
 from .state import CustomerState
 
 ADVISOR_MODEL = config.__dict__.get("ADVISOR_MODEL") or "gpt-5.4-mini"
@@ -35,17 +35,16 @@ _SCHEMA = {
 
 
 def _search(question: str, *, want_numbers: bool = False, timeout: float = 25) -> dict[str, Any] | None:
-    if not config.OPENAI_API_KEY:
+    if not config.OPENAI_API_KEYS:
         return None
     try:
-        from openai import OpenAI
-        client = OpenAI(api_key=config.OPENAI_API_KEY, timeout=timeout, max_retries=0)
         prompt = (question + "\nPrefer official brand/manufacturer pages or established retailers/review sites as sources "
                   f"(e.g. {', '.join(PREFERRED[:6])}). Then answer as JSON: answer (2 sentences max), verdict (one of: "
                   "runs_small | true_to_size | runs_large | reputable | suspicious | unknown | ok), low/high (numbers in CHF when asked for a "
                   "price range, else null), confidence, sources (the URLs you relied on).")
-        r = client.responses.create(model=ADVISOR_MODEL, tools=[{"type": "web_search"}], input=prompt,
-                                    text={"format": {"type": "json_schema", "name": "advice", "schema": _SCHEMA, "strict": True}})
+        r = llm.with_fallback(lambda c: c.responses.create(model=ADVISOR_MODEL, tools=[{"type": "web_search"}], input=prompt,
+                                    text={"format": {"type": "json_schema", "name": "advice", "schema": _SCHEMA, "strict": True}}),
+                              timeout=timeout, max_retries=0)
         data = json.loads(r.output_text)
         cites = [a.url for item in r.output if getattr(item, "type", "") == "message"
                  for part in item.content for a in (getattr(part, "annotations", None) or []) if getattr(a, "url", None)]

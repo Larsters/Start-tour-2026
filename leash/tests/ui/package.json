@@ -1,0 +1,1 @@
+{ "name": "leash-ui-check", "private": true, "scripts": { "test": "node run.js" }, "dependencies": { "jsdom": "^24.0.0" } }

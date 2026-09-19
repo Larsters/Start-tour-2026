@@ -7,7 +7,7 @@ import json
 import re
 from datetime import date
 
-from . import config
+from . import config, llm
 from .config import THRESHOLDS
 from .models import CompiledMandate, IntentSpec, MandateRule, PeriodCap, RequestedItem
 
@@ -144,11 +144,9 @@ _LLM_SYSTEM = """You compile a cardholder's plain-language spending instruction 
 
 
 def compile_llm(instruction: str, today: date | None = None) -> CompiledMandate | None:
-    if not config.OPENAI_API_KEY:
+    if not config.OPENAI_API_KEYS:
         return None
     try:
-        from openai import OpenAI
-        client = OpenAI(api_key=config.OPENAI_API_KEY, timeout=30, max_retries=1)
         schema = IntentSpec.model_json_schema()
         wrapper = {"type": "object", "additionalProperties": False,
                    "properties": {"intent": schema, "open_questions": {"type": "array", "items": {"type": "string"}},
@@ -156,12 +154,12 @@ def compile_llm(instruction: str, today: date | None = None) -> CompiledMandate 
                                   "uncertainty_policy": {"type": "string", "enum": ["ask", "decline", "approve"]}},
                    "required": ["intent", "open_questions", "assumptions", "uncertainty_policy"]}
         extra = {"reasoning_effort": config.REASONING_EFFORT} if config.COMPILER_MODEL.startswith("gpt-5") else {}
-        resp = client.chat.completions.create(
+        resp = llm.with_fallback(lambda c: c.chat.completions.create(
             model=config.COMPILER_MODEL, **extra,
             messages=[{"role": "system", "content": _LLM_SYSTEM + f"\nToday is {today or date.today()}."},
                       {"role": "user", "content": instruction}],
             response_format={"type": "json_schema", "json_schema": {"name": "policy", "schema": wrapper}},
-        )
+        ), timeout=30, max_retries=1)
         data = json.loads(resp.choices[0].message.content or "{}")
         intent = IntentSpec.model_validate(data["intent"])
         banned = re.compile(r"colou?r|style|design|model preference|preferred brand|preferred model", re.I)
@@ -207,17 +205,18 @@ def apply_answer(m: CompiledMandate, question: str, answer: str, today: date | N
         note = f"one_time={i.one_time}"
     elif "months" in ql and re.fullmatch(r"\d{1,3}", a):
         i.max_subscription_term_months = int(a); note = f"max subscription term {a} months"
-    elif "most a single order" in ql and (mo := re.search(r"(\d+(?:[.,]\d+)?)", a)):
-        i.per_order_cap_chf = float(mo.group(1).replace(",", ".")); note = f"per-order cap CHF {i.per_order_cap_chf}"
-    elif config.OPENAI_API_KEY:
+    elif ("most a single order" in ql or "maximum amount" in ql or "spend" in ql or "budget" in ql) and (mo := re.search(r"(\d+(?:[.,]\d+)?)\s*(chf|eur|usd|gbp|€|\$|£)?|(chf|eur|usd|gbp|€|\$|£)\s*(\d+(?:[.,]\d+)?)", a, re.I)):
+        amt = float((mo.group(1) or mo.group(4)).replace(",", "."))
+        cur = (mo.group(2) or mo.group(3) or "chf").lower().replace("€", "eur").replace("$", "usd").replace("£", "gbp")
+        fx = {"chf": 1.0, "eur": 0.95, "usd": 0.87, "gbp": 1.12}[cur]
+        i.per_order_cap_chf = round(amt * fx, 2); note = f"per-order cap CHF {i.per_order_cap_chf}" + (f" (from {amt:g} {cur.upper()})" if cur != "chf" else "")
+    elif config.OPENAI_API_KEYS:
         try:
-            from openai import OpenAI
-            client = OpenAI(api_key=config.OPENAI_API_KEY, timeout=30, max_retries=0)
             schema = {"type": "object", "additionalProperties": False, "properties": {"intent": IntentSpec.model_json_schema(), "note": {"type": "string"}}, "required": ["intent", "note"]}
-            r = client.chat.completions.create(model=config.COMPILER_MODEL, messages=[
+            r = llm.with_fallback(lambda c: c.chat.completions.create(model=config.COMPILER_MODEL, messages=[
                 {"role": "system", "content": _APPLY_SYSTEM + f"\nToday is {today or date.today()}."},
                 {"role": "user", "content": json.dumps({"intent": i.model_dump(mode="json"), "question": question, "answer": a})}],
-                response_format={"type": "json_schema", "json_schema": {"name": "update", "schema": schema}})
+                response_format={"type": "json_schema", "json_schema": {"name": "update", "schema": schema}}), timeout=30, max_retries=0)
             data = json.loads(r.choices[0].message.content or "{}")
             i = IntentSpec.model_validate(data["intent"]); note = data.get("note", "updated by model")
         except Exception as exc:

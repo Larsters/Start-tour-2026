@@ -10,7 +10,7 @@ import secrets
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
-from . import config
+from . import config, llm
 
 # ------------------------------------------------------------- typed facts
 @dataclass
@@ -133,21 +133,19 @@ _SYSTEM = (
 
 def extract_model(item_name: str, item_details: str, timeout_s: float | None = None) -> ExtractedFacts | None:
     """Returns None on any failure (caller falls back to regex)."""
-    if not config.OPENAI_API_KEY:
+    if not config.OPENAI_API_KEYS:
         return None
     try:
-        from openai import OpenAI
-        client = OpenAI(api_key=config.OPENAI_API_KEY, timeout=timeout_s or config.EXTRACTOR_TIMEOUT_S, max_retries=0)
         nonce = secrets.token_hex(4)
         extra = {"reasoning_effort": "minimal"} if config.EXTRACTOR_MODEL.startswith("gpt-5") else {}
-        resp = client.chat.completions.create(
+        resp = llm.with_fallback(lambda c: c.chat.completions.create(
             model=config.EXTRACTOR_MODEL, **extra,
             messages=[
                 {"role": "system", "content": _SYSTEM + f" NONCE={nonce}"},
                 {"role": "user", "content": json.dumps({"item_name": item_name, "merchant_text": item_details})},
             ],
             response_format={"type": "json_schema", "json_schema": {"name": "facts", "strict": True, "schema": _SCHEMA}},
-        )
+        ), timeout=timeout_s or config.EXTRACTOR_TIMEOUT_S, max_retries=0)
         data = json.loads(resp.choices[0].message.content or "{}")
         if data.get("nonce") != nonce:
             return ExtractedFacts(item_type=item_name.lower(), instruction_likeness=3,

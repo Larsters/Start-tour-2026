@@ -19,6 +19,7 @@ uv venv && uv pip install -e ".[dev]"
 #   LEASH_BASE_URL=https://leash-api-production.up.railway.app
 #   TEAM_API_KEY=leash_...           # enables the sandbox worker
 #   OPENAI_API_KEY=...               # optional: compiler + extractor use models, else rules/regex
+#   OPENAI_API_KEY_2=...             # optional: tried automatically if the primary key fails (rate limit/quota/auth)
 .venv/bin/uvicorn leash.api:app --reload --port 8080
 # GET / → service index; GET /health; customer cards GET /cards?customer_id=CU0001
 
@@ -46,6 +47,9 @@ uv venv && uv pip install -e ".[dev]"
 | `service.py` | Operations shared by HTTP and MCP: draft, answers, dry-run, confirm, precheck, propose, cards |
 | `api.py` | FastAPI: decide, precheck, propose, mandates, dry-run, cards, ledger |
 | `live.py` | Live sandbox runner (observe the API worker, or poll here) |
+| `report.py` | Platform report: latest completed run per scenario vs our leans, timing, fallbacks |
+| `agent.py` / `demo_catalogue.py` / `mockshop.py` | The demo shopping agent (OpenAI tool loop) and its mock shop: nine fixed products + LLM-generated listings for any other query |
+| `events.py` / `web/index.html` | Event bus and the split-screen demo page (`/app`) |
 | `mcp_server.py` | MCP tools for the agent |
 | `replay.py` | Offline replay + expected-lean diff (`fixtures/expected/*.yaml`) |
 

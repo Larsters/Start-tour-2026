@@ -58,14 +58,25 @@ def products() -> list[dict]:
     ]
 
 
-def search(query: str, max_results: int = 5) -> list[dict]:
+def _view(p: dict) -> dict:
+    return {k: p[k] for k in ("sku", "name", "brand", "category", "price", "currency", "sizes", "delivery_days", "returns_days")} | \
+           {"merchant": p["merchant"]["merchant_name"], "merchant_country": p["merchant"]["merchant_country"], "delivery_by": _d(p["delivery_days"])}
+
+
+def search(query: str, max_results: int = 5, customer_id: str | None = None) -> list[dict]:
     q = {t for t in query.lower().replace(",", " ").split() if len(t) > 2}
     scored = []
     for p in products():
         hay = set(p["tags"]) | set(p["name"].lower().split()) | {p["category"], (p["brand"] or "")}
         score = len(q & hay)
-        if score:
+        if score >= 2 or (score == 1 and len(q) == 1):
             scored.append((score, p))
+    if len(scored) < 2 and customer_id:
+        from .mockshop import generate
+        try:
+            return [_view(p) for p in generate(query, customer_id)]
+        except Exception as exc:
+            return [{"error": f"shop search failed: {exc}"}]
     out = []
     for _, p in sorted(scored, key=lambda x: -x[0])[:max_results]:
         out.append({k: p[k] for k in ("sku", "name", "brand", "category", "price", "currency", "sizes", "delivery_days", "returns_days")}
@@ -76,9 +87,12 @@ def search(query: str, max_results: int = 5) -> list[dict]:
 def build_cart(items: list[dict]) -> dict:
     """items: [{sku, size?, quantity?}]. All items must be sold by the same merchant."""
     by = {p["sku"]: p for p in products()}
+    from .mockshop import get as _gen
     lines, merchant = [], None
     for n, spec in enumerate(items, 1):
-        p = by[spec["sku"]]
+        p = by.get(spec["sku"]) or _gen(spec["sku"])
+        if not p:
+            raise KeyError(f"unknown sku {spec['sku']}")
         if merchant is None:
             merchant = p["merchant"]
         elif p["merchant"]["merchant_id"] != merchant["merchant_id"]:
@@ -90,9 +104,10 @@ def build_cart(items: list[dict]) -> dict:
         lines.append({"item_id": p.get("item_id", f"IT_{p['sku']}"), "item_name": p["name"], "item_category": p["category"],
                       "quantity": int(spec.get("quantity", 1)), "unit_price": p["price"], "currency": p["currency"],
                       "item_details": p["details"].format(size=size_txt).replace(", ;", ";").replace(",  ", ", ")})
-    first = by[items[0]["sku"]]
-    slowest = max(by[i["sku"]]["delivery_days"] for i in items)
-    returnable = all(by[i["sku"]]["returns_days"] for i in items)
+    _p = lambda i: by.get(i["sku"]) or _gen(i["sku"])
+    first = _p(items[0])
+    slowest = max(_p(i)["delivery_days"] for i in items)
+    returnable = all(_p(i)["returns_days"] for i in items)
     return {"merchant": merchant, "items": lines, "delivery_fee": 0.0, "delivery_by": _d(slowest),
             "order_returnable": "true" if returnable else "unknown", "fulfillment_method": "delivery", "purchase_description": first["name"]}
 

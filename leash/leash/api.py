@@ -24,7 +24,7 @@ log = logging.getLogger("leash.api")
 async def lifespan(app: FastAPI):
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
     app.state.worker = None
-    if service.config.OPENAI_API_KEY:
+    if service.config.OPENAI_API_KEYS:
         # warm the extractor path once so the first live decision does not pay the cold-start and fall back to regex
         import threading
         from .quarantine import extract
@@ -195,7 +195,7 @@ def web_app():
 
 @app.post("/chat")
 def chat(body: ChatIn):
-    if not service.config.OPENAI_API_KEY:
+    if not service.config.OPENAI_API_KEYS:
         raise HTTPException(400, "OPENAI_API_KEY not set")
     return agent.chat(body.customer_id, body.message, body.card_id)
 
@@ -222,5 +222,7 @@ def customers():
     out = []
     for cid, c in r.customers.items():
         cards = [k for k, b in r.baselines.items() if b.customer_id == cid]
-        out.append({"customer_id": cid, "name": c["persona_name"], "card_id": cards[0] if cards else None, "preferences": c["shopping_preferences"]})
+        from .mockshop import familiar_merchants
+        out.append({"customer_id": cid, "name": c["persona_name"], "card_id": cards[0] if cards else None, "preferences": c["shopping_preferences"],
+                    "familiar": familiar_merchants(cid, 6)})
     return out
